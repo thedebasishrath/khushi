@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Khushi — Daily Planner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a;
+      color: #e8e8e8;
+      min-height: 100vh;
+      padding: 44px 32px 130px;
+    }
+
+    .container { max-width: 980px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+    .greeting { font-size: 12px; color: #888; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+    .date-heading { font-size: 26px; font-weight: 700; color: #f0f0f0; letter-spacing: -0.5px; }
+    .north-star { font-size: 12px; color: #888; text-align: right; max-width: 300px; line-height: 1.5; }
+    .ns-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+
+    .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; }
+    .prog-bar { flex: 1; height: 2px; background: #1e1e1e; border-radius: 2px; }
+    .prog-fill { height: 100%; background: #666; border-radius: 2px; transition: width 0.4s; }
+    .prog-txt { font-size: 11px; color: #777; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    /* ── Grid ── */
+    .grid { display: grid; grid-template-columns: 1fr 270px; gap: 0; }
+    .main { min-width: 0; border-right: 1px solid #1e1e1e; padding-right: 32px; }
+    .sidebar { padding-left: 32px; }
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+      .main { border-right: none; padding-right: 0; }
+      .sidebar { padding-left: 0; margin-top: 32px; }
+    }
+
+    /* ── Section ── */
+    .section { border-top: 1px solid #1e1e1e; padding: 22px 0; }
+
+    .sec-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .sec-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .sec-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #888; }
+    .sec-count { font-size: 11px; color: #666; margin-left: auto; }
+    .clear-btn { font-size: 11px; color: #666; background: none; border: none; cursor: pointer; margin-left: 8px; }
+    .clear-btn:hover { color: #aaa; }
+
+    /* ── Task ── */
+    .task { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #151515; position: relative; }
+    .task:last-of-type { border-bottom: none; }
+    .task:hover .del { opacity: 1; }
+
+    /* Checkbox — Today tab */
+    .cb {
+      width: 17px; height: 17px;
+      border: 1.5px solid #3a3a3a;
+      border-radius: 4px;
+      flex-shrink: 0; margin-top: 2px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+      background: transparent;
+    }
+    .cb:hover { border-color: #666; }
+    .cb.on { background: #34d399; border-color: #34d399; }
+    .cb.on::after {
+      content: '';
+      width: 8px; height: 5px;
+      border-left: 2px solid #0a0a0a;
+      border-bottom: 2px solid #0a0a0a;
+      transform: rotate(-45deg) translateY(-1px);
+      display: block;
+    }
+
+    .task-body { flex: 1; min-width: 0; }
+
+    .task-lbl {
+      font-size: 15px;
+      line-height: 1.55;
+      color: #d8d8d8;
+      outline: none;
+      border-radius: 3px;
+      padding: 1px 4px;
+      margin: 0 -4px;
+      display: block;
+      word-break: break-word;
+    }
+    .task-lbl:focus { background: #141414; box-shadow: 0 0 0 1px #333; color: #f0f0f0; }
+    .task.done .task-lbl { text-decoration: line-through; color: #3a3a3a; }
+
+    .tag {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 99px;
+      margin-top: 5px; display: inline-block;
+      cursor: pointer;
+    }
+    .t-data  { background: #0d1f35; color: #60a5fa; }
+    .t-coord { background: #160f2e; color: #a78bfa; }
+    .t-calls { background: #071a12; color: #34d399; }
+    .t-focus { background: #1a0d02; color: #fbbf24; }
+    .t-none  { background: #1a1a1a; color: #555; }
+
+    .del {
+      opacity: 0; background: none; border: none;
+      color: #666; font-size: 18px; cursor: pointer;
+      flex-shrink: 0; margin-top: 0; padding: 0 2px;
+      transition: opacity 0.15s, color 0.15s; line-height: 1.4;
+    }
+    .del:hover { color: #e05050; }
+
+    /* Add task */
+    .add-row { margin-top: 10px; }
+    .add-btn {
+      font-size: 13px; color: #777;
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      transition: color 0.15s;
+    }
+    .add-btn:hover { color: #bbb; }
+    .plus { font-size: 18px; font-weight: 300; line-height: 1; }
+
+    /* Tag picker */
+    .tag-picker {
+      position: absolute; top: calc(100% + 2px); left: 30px;
+      background: #111; border: 1px solid #2a2a2a;
+      border-radius: 8px; padding: 8px;
+      display: flex; gap: 6px; flex-wrap: wrap;
+      z-index: 200; box-shadow: 0 12px 32px rgba(0,0,0,0.8);
+    }
+    .tp { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 99px; border: none; cursor: pointer; }
+    .tp:hover { opacity: 0.7; }
+
+    /* ── Sidebar sections ── */
+    .side-block { border-top: 1px solid #1e1e1e; padding: 22px 0; }
+    .side-title {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase; color: #888;
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .fu { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid #151515; }
+    .fu:last-child { border-bottom: none; }
+    .av {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #141414; border: 1px solid #2a2a2a;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #666;
+      flex-shrink: 0; letter-spacing: 0.02em;
+    }
+    .fu-name { font-size: 13px; font-weight: 600; color: #e0e0e0; }
+    .fu-desc { font-size: 12px; color: #888; margin-top: 2px; line-height: 1.4; }
+    .badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; margin-top: 4px; display: inline-block; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .b-wait { background: transparent; color: #d97706; border: 1px solid #3a2800; cursor: pointer; }
+    .b-pend { background: transparent; color: #ef4444; border: 1px solid #3a0a0a; cursor: pointer; }
+    .b-done { background: transparent; color: #34d399; border: 1px solid #0a3a1a; cursor: pointer; }
+    .badge:hover { opacity: 0.75; }
+
+    .fu { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid #151515; position: relative; }
+    .fu:last-of-type { border-bottom: none; }
+    .fu:hover .fu-del { opacity: 1; }
+    .fu-del { opacity: 0; background: none; border: none; color: #666; font-size: 16px; cursor: pointer; margin-left: auto; flex-shrink: 0; transition: opacity 0.15s, color 0.15s; padding: 0 2px; align-self: flex-start; line-height: 1.6; }
+    .fu-del:hover { color: #e05050; }
+    .fu.resolved .fu-name, .fu.resolved .fu-desc { text-decoration: line-through; color: #3a3a3a; }
+
+    .fu-editable { outline: none; border-radius: 2px; padding: 0 2px; margin: 0 -2px; }
+    .fu-editable:focus { background: #141414; box-shadow: 0 0 0 1px #333; }
+
+    .proj { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #151515; }
+    .proj:last-child { border-bottom: none; }
+    .proj-name { font-size: 12px; color: #666; }
+    .proj-s { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .ps-a { color: #34d399; }
+    .ps-w { color: #fbbf24; }
+    .ps-d { color: #60a5fa; }
+    .ps-s { color: #666; }
+
+    /* Dots */
+    .d-data  { background: #3B82F6; }
+    .d-coord { background: #8B5CF6; }
+    .d-calls { background: #10B981; }
+    .d-focus { background: #F59E0B; }
+    .d-foll  { background: #EF4444; }
+
+    /* ── Chat bar ── */
+    .chat-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #0a0a0a;
+      border-top: 1px solid #1e1e1e;
+      padding: 14px 32px 18px;
+      z-index: 100;
+    }
+    .chat-inner {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    .chat-preview {
+      font-size: 11px;
+      color: #555;
+      margin-bottom: 8px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+    .chat-preview.visible { color: #888; }
+    .chat-preview-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .chat-preview-cat { font-weight: 600; }
+    .chat-preview-tag {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.04em; padding: 1px 7px; border-radius: 99px;
+    }
+    .chat-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chat-input {
+      flex: 1;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 11px 16px;
+      font-size: 14px;
+      color: #e0e0e0;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .chat-input::placeholder { color: #444; }
+    .chat-input:focus { border-color: #444; }
+    .chat-send {
+      background: #e0e0e0;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .chat-send:hover { background: #fff; }
+    .chat-send:disabled { background: #2a2a2a; color: #555; cursor: default; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #e0e0e0;
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex; gap: 0; margin-bottom: 28px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .tab-btn {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      background: none; border: none; color: #555; cursor: pointer;
+      padding: 10px 0; margin-right: 28px;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s; font-family: inherit;
+    }
+    .tab-btn:hover { color: #aaa; }
+    .tab-btn.active { color: #e8e8e8; border-bottom-color: #e8e8e8; }
+
+    /* ── My Work tab ── */
+    #tab-mywork { display: none; }
+    .mw-layout { display: grid; grid-template-columns: 220px 1fr; gap: 0; min-height: 60vh; }
+    .mw-sidebar {
+      border-right: 1px solid #1e1e1e; padding-right: 24px;
+      position: sticky; top: 0; align-self: start;
+    }
+    .mw-layout { display: flex; min-height: calc(100vh - 180px); }
+    .mw-sidebar {
+      width: 220px; flex-shrink: 0;
+      border-right: 1px solid #1a1a1a;
+      padding: 16px 0; overflow-y: auto;
+    }
+    .mw-sidebar-group {
+      font-size: 10px; font-weight: 700; color: #3a3a3a;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      padding: 14px 20px 4px;
+    }
+    .mw-sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 20px; font-size: 13px; color: #555;
+      cursor: pointer; transition: background 0.12s, color 0.12s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mw-sidebar-item:hover { background: #111; color: #ccc; }
+    .mw-sidebar-item.active { background: #141414; color: #e8e8e8; font-weight: 500; }
+    .mw-sidebar-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .mw-sidebar-name { overflow: hidden; text-overflow: ellipsis; }
+    .mw-main {
+      flex: 1; min-width: 0; padding: 40px 56px 80px;
+      overflow-y: auto; max-height: calc(100vh - 180px);
+    }
+    .mw-md {
+      font-size: 14px; line-height: 1.7; color: #c8c8c8;
+      max-width: 680px;
+    }
+    .mw-md h1 { font-size: 22px; font-weight: 700; color: #f0f0f0; margin: 0 0 6px; letter-spacing: -0.3px; }
+    .mw-md h2 { font-size: 14px; font-weight: 600; color: #e0e0e0; margin: 28px 0 10px; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; border-top: 1px solid #1e1e1e; padding-top: 20px; }
+    .mw-md h3 { font-size: 13px; font-weight: 600; color: #bbb; margin: 18px 0 8px; }
+    .mw-md p { margin: 0 0 12px; }
+    .mw-md strong { color: #e8e8e8; font-weight: 600; }
+    .mw-md em { color: #999; }
+    .mw-md ul, .mw-md ol { padding-left: 20px; margin: 0 0 12px; }
+    .mw-md li { margin-bottom: 5px; }
+    .mw-md li input[type="checkbox"] { margin-right: 7px; accent-color: #34d399; cursor: pointer; }
+    .mw-md blockquote {
+      border-left: 3px solid #2a2a2a; margin: 0 0 12px; padding: 8px 16px;
+      color: #888; font-style: italic;
+    }
+    .mw-md code {
+      background: #141414; border: 1px solid #222; border-radius: 4px;
+      padding: 1px 6px; font-size: 12px; color: #a78bfa; font-family: monospace;
+    }
+    .mw-md pre {
+      background: #111; border: 1px solid #222; border-radius: 8px;
+      padding: 14px 18px; overflow-x: auto; margin: 0 0 12px;
+    }
+    .mw-md pre code { background: none; border: none; padding: 0; color: #888; font-size: 12px; }
+    .mw-md table { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 13px; }
+    .mw-md th { text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #666; border-bottom: 1px solid #222; padding: 6px 12px 6px 0; }
+    .mw-md td { border-bottom: 1px solid #151515; padding: 8px 12px 8px 0; color: #aaa; vertical-align: top; }
+    .mw-md hr { border: none; border-top: 1px solid #1e1e1e; margin: 24px 0; }
+    .mw-md a { color: #60a5fa; text-decoration: none; }
+    .mw-md a:hover { text-decoration: underline; }
+    .mw-updated { font-size: 11px; color: #444; margin-bottom: 24px; }
+
+    /* ── My Work — file area ── */
+    #mywork-pane { padding-top: 0; margin: 0 -32px; border-top: 1px solid #1a1a1a; }
+    .mw-file-actions {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 28px; padding-bottom: 16px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .mw-save-indicator { font-size: 11px; color: #333; transition: color 0.3s; }
+    .mw-save-indicator.saved { color: #34d399; }
+    .mw-editable { outline: none; cursor: text; }
+
+    /* ── My Work editing ── */
+    .mw-toolbar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .mw-btn {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+      background: none; border: 1px solid #2a2a2a; color: #555;
+      border-radius: 6px; padding: 6px 13px; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .mw-btn:hover { border-color: #444; color: #bbb; }
+    .mw-btn.active-edit { background: #e0e0e0; color: #000; border-color: #e0e0e0; }
+    .mw-btn.active-edit:hover { background: #fff; }
+    .mw-edited-badge {
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+      color: #fbbf24; background: #1a1200; border: 1px solid #3a2800;
+      border-radius: 99px; padding: 2px 9px;
+    }
+    .mw-textarea {
+      width: 100%; min-height: 72vh;
+      background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 8px;
+      padding: 20px 24px; font-size: 13px; line-height: 1.75; color: #c8c8c8;
+      font-family: 'SFMono-Regular', 'Consolas', 'Monaco', monospace;
+      outline: none; resize: vertical; box-sizing: border-box;
+    }
+    .mw-textarea:focus { border-color: #333; }
+
+
+    /* ── Settings modal ── */
+    .settings-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .settings-modal {
+      background: #111; border: 1px solid #2a2a2a;
+      border-radius: 12px; padding: 28px 32px;
+      width: 420px; max-width: 90vw;
+    }
+    .settings-title { font-size: 14px; font-weight: 600; color: #e0e0e0; margin-bottom: 20px; }
+    .settings-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .settings-input {
+      width: 100%; background: #0a0a0a; border: 1px solid #2a2a2a;
+      border-radius: 6px; padding: 10px 14px; font-size: 13px;
+      color: #e0e0e0; font-family: inherit; outline: none; margin-bottom: 10px;
+    }
+    .settings-input:focus { border-color: #444; }
+    .settings-hint { font-size: 11px; color: #444; line-height: 1.5; margin-bottom: 18px; }
+    .settings-row { display: flex; gap: 10px; justify-content: flex-end; }
+    .settings-save { background: #e0e0e0; color: #000; border: none; border-radius: 6px; padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .settings-save:hover { background: #fff; }
+    .settings-cancel { background: none; color: #555; border: none; border-radius: 6px; padding: 9px 16px; font-size: 13px; cursor: pointer; font-family: inherit; }
+    .settings-cancel:hover { color: #aaa; }
+
+    /* ── Chat loading dots ── */
+    .chat-thinking { display: flex; gap: 4px; align-items: center; }
+    .think-dot { width: 4px; height: 4px; border-radius: 50%; background: #555; animation: tdot 1.2s infinite ease-in-out; }
+    .think-dot:nth-child(2) { animation-delay: 0.2s; }
+    .think-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes tdot { 0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)} }
+
+    /* ── AI response in preview ── */
+    .chat-ai-response { font-size: 12px; color: #999; line-height: 1.55; max-height: 56px; overflow: hidden; }
+
+    /* ── Settings gear button ── */
+    .settings-gear {
+      background: none; border: none; color: #444; cursor: pointer;
+      font-size: 15px; padding: 4px 6px; transition: color 0.15s;
+      flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+    }
+    .settings-gear:hover { color: #888; }
+    .key-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .key-dot.set   { background: #34d399; }
+    .key-dot.unset { background: #444; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked@13/marked.min.js"></script>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header-top">
+    <div>
+      <div class="greeting">Daily Planner</div>
+      <div class="date-heading" id="dateDisplay"></div>
+    </div>
+    <div class="north-star">
+      <div class="ns-label">North Star</div>
+      Figure out what to build with or apart from Yoga
+    </div>
+  </div>
+  <div class="progress-row">
+    <div class="prog-bar"><div class="prog-fill" id="pFill" style="width:0%"></div></div>
+    <div class="prog-txt" id="pTxt">0 / 0</div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="today" onclick="switchTab('today')">Today</button>
+    <button class="tab-btn" data-tab="mywork" onclick="switchTab('mywork')">My Work</button>
+  </div>
+
+  <!-- Today tab -->
+  <div id="today-pane" class="grid">
+    <div class="main" id="mainCol"></div>
+    <div class="sidebar" id="sideCol"></div>
+  </div>
+
+  <!-- My Work tab -->
+  <div id="mywork-pane" style="display:none">
+    <div class="mw-layout">
+      <div class="mw-sidebar" id="mwSidebar"></div>
+      <div class="mw-main" id="mwContent"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+<script>
+// ── Date ──────────────────────────────────────────────────────────────────────
+const D=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const t=new Date();
+document.getElementById('dateDisplay').textContent=`${D[t.getDay()]}, ${t.getDate()} ${M[t.getMonth()]}`;
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const DEFAULTS=[
+  {id:'data',label:'Data Work',dot:'d-data',tasks:[
+    {id:'d1',label:'Pull 14-day free trial users data — activation, retention curve, drop-off, conversion',tag:'14-day trial',tc:'t-data',done:false},
+    {id:'d2',label:'Check user call data for cognitive games (Viyu, Kramika, Mind Math)',tag:'cognitive games',tc:'t-data',done:false},
+    {id:'d3',label:'Review weekly active user retention for games — when Ashutosh shares',tag:'cognitive games',tc:'t-data',done:false},
+  ]},
+  {id:'coord',label:'Coordination Work',dot:'d-coord',tasks:[
+    {id:'c1',label:'Messaged Ayush — A/B testing setup timeline',tag:'A/B testing',tc:'t-coord',done:true},
+    {id:'c2',label:'Messaged Ritik — TV app onboarding tutorial video brief',tag:'TV app',tc:'t-coord',done:true},
+    {id:'c3',label:'Messaged Ashutosh — cognitive games tasks',tag:'cognitive games',tc:'t-coord',done:true},
+    {id:'c4',label:'Spoke to Deba (designer) — dynamic homescreen',tag:'homescreen',tc:'t-coord',done:true},
+    {id:'c5',label:'Sync with Bala — Mobile CRM capabilities',tag:'notifications',tc:'t-coord',done:false},
+  ]},
+  {id:'calls',label:'User Call Work',dot:'d-calls',tasks:[
+    {id:'u1',label:'Define screener + interview guide for user calls',tag:'research',tc:'t-calls',done:false},
+    {id:'u2',label:'Run first 2–3 user calls — understand full wellness day',tag:'research',tc:'t-calls',done:false},
+    {id:'u3',label:'User calls for cognitive games — W4–W5 churn users',tag:'cognitive games',tc:'t-calls',done:false},
+    {id:'u4',label:'User calls — users who clicked on share',tag:'cognitive games',tc:'t-calls',done:false},
+  ]},
+  {id:'focus',label:'Focus Hour Work',dot:'d-focus',tasks:[
+    {id:'f1',label:'Read Mind Math document',tag:'cognitive games',tc:'t-focus',done:false},
+    {id:'f2',label:'Read cognitive games research doc + slides from Ashutosh',tag:'cognitive games',tc:'t-focus',done:false},
+    {id:'f3',label:'Think of unbiased cohort for difficulty testing',tag:'cognitive games',tc:'t-focus',done:false},
+    {id:'f4',label:'Think through TV app GTM positioning + onboarding flow',tag:'TV app',tc:'t-focus',done:false},
+    {id:'f5',label:'Fill notification copy sheet by cohort',tag:'notifications',tc:'t-focus',done:false},
+  ]},
+];
+
+const TAGS=[
+  {l:'14-day trial',c:'t-data'},{l:'A/B testing',c:'t-coord'},{l:'TV app',c:'t-coord'},
+  {l:'cognitive games',c:'t-focus'},{l:'research',c:'t-calls'},{l:'notifications',c:'t-focus'},
+  {l:'homescreen',c:'t-coord'},{l:'no tag',c:'t-none'},
+];
+
+const KEY='habuild_v6';
+['habuild_tasks','habuild_v2','habuild_v3','habuild_v4','habuild_v5'].forEach(k=>localStorage.removeItem(k));
+
+const API_KEY_STORE='habuild_apikey';
+let apiKey=localStorage.getItem(API_KEY_STORE)||'';
+
+const DEFAULT_FOLLOWUPS=[
+  {id:'fu1',name:'Ayush',   initials:'AY',desc:'A/B testing timeline',        status:'waiting'},
+  {id:'fu2',name:'Bala',    initials:'BA',desc:'Mobile CRM — not messaged yet',status:'pending'},
+  {id:'fu3',name:'Ritik',   initials:'RI',desc:'TV app tutorial video',        status:'waiting'},
+  {id:'fu4',name:'Ashutosh',initials:'AS',desc:'Slides + Google Form + data',  status:'waiting'},
+];
+
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||JSON.parse(JSON.stringify(DEFAULTS));
+let followups=JSON.parse(localStorage.getItem(KEY+'_fu')||'null')||JSON.parse(JSON.stringify(DEFAULT_FOLLOWUPS));
+const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
+const saveFu=()=>localStorage.setItem(KEY+'_fu',JSON.stringify(followups));
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(){
+  const col=document.getElementById('mainCol');
+  col.innerHTML='';
+  col.style.paddingRight='';
+  data.forEach(sec=>{
+    const wrap=document.createElement('div');
+    wrap.className='section';
+    const done=sec.tasks.filter(t=>t.done).length;
+    // Header
+    const hdr=document.createElement('div');
+    hdr.className='sec-header';
+    hdr.innerHTML=`<div class="sec-dot ${sec.dot}"></div><div class="sec-title">${sec.label}</div><button class="clear-btn">clear done</button><div class="sec-count" id="cnt-${sec.id}">${done}/${sec.tasks.length}</div>`;
+    hdr.querySelector('.clear-btn').onclick=()=>{sec.tasks=sec.tasks.filter(t=>!t.done);save();render();};
+    wrap.appendChild(hdr);
+    // Task list
+    const list=document.createElement('div');
+    list.id='list-'+sec.id;
+    sec.tasks.forEach(task=>list.appendChild(mkTask(task,sec)));
+    wrap.appendChild(list);
+    // Add button
+    const ar=document.createElement('div');
+    ar.className='add-row';
+    ar.innerHTML=`<button class="add-btn"><span class="plus">+</span> Add task</button>`;
+    ar.querySelector('button').onclick=()=>addTask(sec);
+    wrap.appendChild(ar);
+    col.appendChild(wrap);
+  });
+  updProg();
+}
+
+function mkTask(task,sec){
+  const el=document.createElement('div');
+  el.className='task'+(task.done?' done':'');
+  el.dataset.id=task.id;
+
+  // Checkbox
+  const cb=document.createElement('div');
+  cb.className='cb'+(task.done?' on':'');
+  cb.onclick=()=>{task.done=!task.done;el.classList.toggle('done',task.done);cb.classList.toggle('on',task.done);save();updProg();updCnt(sec);};
+
+  // Body
+  const body=document.createElement('div');
+  body.className='task-body';
+  body.style.position='relative';
+
+  const lbl=document.createElement('div');
+  lbl.className='task-lbl';
+  lbl.contentEditable='true';
+  lbl.spellcheck=false;
+  lbl.textContent=task.label;
+  lbl.onblur=()=>{task.label=lbl.textContent.trim();save();};
+  lbl.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();lbl.blur();}if(e.key==='Escape'){lbl.textContent=task.label;lbl.blur();}};
+
+  const tagEl=document.createElement('span');
+  tagEl.className='tag '+task.tc;
+  tagEl.textContent=task.tag||'no tag';
+  tagEl.onclick=e=>{e.stopPropagation();showPicker(body,tagEl,task,sec);};
+
+  body.appendChild(lbl);
+  body.appendChild(tagEl);
+
+  // Delete
+  const del=document.createElement('button');
+  del.className='del';del.innerHTML='&times;';del.title='Delete';
+  del.onclick=()=>{sec.tasks=sec.tasks.filter(t=>t.id!==task.id);save();el.remove();updProg();updCnt(sec);};
+
+  el.appendChild(cb);el.appendChild(body);el.appendChild(del);
+  return el;
+}
+
+let _p=null;
+function showPicker(body,tagEl,task,sec){
+  if(_p){_p.remove();_p=null;return;}
+  const p=document.createElement('div');p.className='tag-picker';
+  TAGS.forEach(opt=>{
+    const b=document.createElement('button');b.className=`tp ${opt.c}`;b.textContent=opt.l;
+    b.onclick=e=>{e.stopPropagation();task.tag=opt.l==='no tag'?'':opt.l;task.tc=opt.c;p.remove();_p=null;save();render();};
+    p.appendChild(b);
+  });
+  body.appendChild(p);_p=p;
+  setTimeout(()=>document.addEventListener('click',()=>{_p?.remove();_p=null;},{once:true}),0);
+}
+
+function addTask(sec){
+  const task={id:sec.id+'_'+Date.now(),label:'New task',tag:'',tc:'t-none',done:false};
+  sec.tasks.push(task);save();
+  const list=document.getElementById('list-'+sec.id);
+  const el=mkTask(task,sec);
+  list.appendChild(el);
+  updProg();updCnt(sec);
+  const lbl=el.querySelector('.task-lbl');
+  lbl.focus();
+  const r=document.createRange();r.selectNodeContents(lbl);
+  window.getSelection().removeAllRanges();window.getSelection().addRange(r);
+}
+
+function updProg(){
+  const all=document.querySelectorAll('.task').length;
+  const done=document.querySelectorAll('.task.done').length;
+  document.getElementById('pFill').style.width=(all?Math.round(done/all*100):0)+'%';
+  document.getElementById('pTxt').textContent=done+' / '+all;
+}
+function updCnt(sec){
+  const el=document.getElementById('cnt-'+sec.id);
+  if(el)el.textContent=sec.tasks.filter(t=>t.done).length+'/'+sec.tasks.length;
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+const STATUS_CYCLE={waiting:'pending',pending:'done',done:'waiting'};
+const STATUS_LABEL={waiting:'Waiting',pending:'To contact',done:'Done'};
+const STATUS_CLASS={waiting:'b-wait',pending:'b-pend',done:'b-done'};
+
+function mkFollowup(fu){
+  const el=document.createElement('div');
+  el.className='fu'+(fu.status==='done'?' resolved':'');
+  el.dataset.id=fu.id;
+
+  // Avatar (auto-initials from name)
+  const av=document.createElement('div');
+  av.className='av';
+  av.textContent=fu.initials||fu.name.slice(0,2).toUpperCase();
+
+  // Body
+  const body=document.createElement('div');
+  body.style.flex='1';body.style.minWidth='0';
+
+  const nameEl=document.createElement('div');
+  nameEl.className='fu-name fu-editable';
+  nameEl.contentEditable='true';nameEl.spellcheck=false;
+  nameEl.textContent=fu.name;
+  nameEl.onblur=()=>{
+    fu.name=nameEl.textContent.trim();
+    fu.initials=fu.name.slice(0,2).toUpperCase();
+    av.textContent=fu.initials;
+    saveFu();
+  };
+  nameEl.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();nameEl.blur();}};
+
+  const descEl=document.createElement('div');
+  descEl.className='fu-desc fu-editable';
+  descEl.contentEditable='true';descEl.spellcheck=false;
+  descEl.textContent=fu.desc;
+  descEl.style.marginTop='2px';
+  descEl.onblur=()=>{fu.desc=descEl.textContent.trim();saveFu();};
+  descEl.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();descEl.blur();}};
+
+  const badge=document.createElement('span');
+  badge.className='badge '+STATUS_CLASS[fu.status];
+  badge.textContent=STATUS_LABEL[fu.status];
+  badge.title='Click to change status';
+  badge.onclick=()=>{
+    fu.status=STATUS_CYCLE[fu.status];
+    badge.className='badge '+STATUS_CLASS[fu.status];
+    badge.textContent=STATUS_LABEL[fu.status];
+    el.classList.toggle('resolved',fu.status==='done');
+    saveFu();
+  };
+  badge.style.marginTop='4px';
+
+  body.appendChild(nameEl);body.appendChild(descEl);body.appendChild(badge);
+
+  // Delete
+  const del=document.createElement('button');
+  del.className='fu-del';del.innerHTML='&times;';del.title='Remove';
+  del.onclick=()=>{followups=followups.filter(f=>f.id!==fu.id);saveFu();renderFuList();};
+
+  el.appendChild(av);el.appendChild(body);el.appendChild(del);
+  return el;
+}
+
+function renderFuList(){
+  const list=document.getElementById('fu-list');
+  if(!list)return;
+  list.innerHTML='';
+  followups.forEach(fu=>list.appendChild(mkFollowup(fu)));
+}
+
+function renderSide(){
+  const col=document.getElementById('sideCol');
+  col.innerHTML='';
+
+  // Follow-ups block
+  const fuBlock=document.createElement('div');
+  fuBlock.className='side-block';
+  fuBlock.innerHTML=`<div class="side-title"><div class="sec-dot d-foll"></div>Pending Follow-ups</div>`;
+  const fuList=document.createElement('div');
+  fuList.id='fu-list';
+  fuBlock.appendChild(fuList);
+
+  const addFuRow=document.createElement('div');
+  addFuRow.className='add-row';
+  addFuRow.style.marginTop='10px';
+  addFuRow.innerHTML=`<button class="add-btn"><span class="plus">+</span> Add follow-up</button>`;
+  addFuRow.querySelector('button').onclick=()=>{
+    const fu={id:'fu_'+Date.now(),name:'Name',initials:'',desc:'What are you waiting for?',status:'waiting'};
+    followups.push(fu);saveFu();
+    const el=mkFollowup(fu);
+    fuList.appendChild(el);
+    el.querySelector('.fu-name').focus();
+    const r=document.createRange();r.selectNodeContents(el.querySelector('.fu-name'));
+    window.getSelection().removeAllRanges();window.getSelection().addRange(r);
+  };
+  fuBlock.appendChild(addFuRow);
+  col.appendChild(fuBlock);
+
+  // Projects block
+  col.insertAdjacentHTML('beforeend',`
+    <div class="side-block">
+      <div class="side-title">Projects</div>
+      ${[
+        {n:'01 User Research',      s:'Active',       c:'ps-a'},
+        {n:'02 14-Day Trial',       s:'Data needed',  c:'ps-w'},
+        {n:'03 A/B Infra',          s:'Waiting Ayush',c:'ps-w'},
+        {n:'04 Dynamic Homescreen', s:'With Deba',    c:'ps-d'},
+        {n:'05 Web Prototypes',     s:'Scoping',      c:'ps-s'},
+        {n:'06 Notifications',      s:'Active',       c:'ps-a'},
+        {n:'07 TV App',             s:'Active',       c:'ps-a'},
+        {n:'08 Cognitive Games',    s:'Active',       c:'ps-a'},
+        {n:'09 Content Strategy',   s:'Active',       c:'ps-a'},
+      ].map(p=>`<div class="proj"><span class="proj-name">${p.n}</span><span class="proj-s ${p.c}">${p.s}</span></div>`).join('')}
+    </div>`);
+
+  renderFuList();
+}
+
+render();
+renderSide();
+renderChat();
+
+// ── Smart parser ──────────────────────────────────────────────────────────────
+const SECTION_RULES = [
+  { id:'coord', label:'Coordination Work', dot:'d-coord',
+    signals:/spoke to|spoke with|speak to|speak with|had a word|had a chat|had a call|had a meeting|called|messaged|meeting with|sync with|follow.?up|pinged|reached out|talked to|talk to|talk with|need to speak|need to connect|connect with|catch up|briefed|updated|informed|checked in|heard from|waiting for|asked .*(to|me)|he said|she said|they said|word with|chat with|need to reach|reach out/i },
+  { id:'calls', label:'User Call Work',    dot:'d-calls',
+    signals:/user call|user interview|interview|user research|research call|spoke to user|call with user|feedback call|customer call|ran a call|conducted/i },
+  { id:'data',  label:'Data Work',         dot:'d-data',
+    signals:/pull|check data|analyze|analysis|review.*data|data.*review|numbers|metrics|retention|conversion|dashboard|look at data|dig into|funnel|cohort|query/i },
+  { id:'focus', label:'Focus Hour Work',   dot:'d-focus',
+    signals:/read|think about|brainstorm|write|draft|plan|design|figure out|spec|document|prepare|explore|ideate|map out|outline|review doc|go through/i },
+];
+
+const TAG_RULES = [
+  { tag:'homescreen',   tc:'t-coord',  pat:/homescreen|home screen|deep.?link|deeplink|deba/i },
+  { tag:'A/B testing',  tc:'t-coord',  pat:/a\/b\s|ab test|experiment|appsflyer|apps.?flyer|ayush/i },
+  { tag:'TV app',       tc:'t-coord',  pat:/tv app|ritik|television|android tv|fire tv/i },
+  { tag:'notifications',tc:'t-focus',  pat:/notification|bala|crm|push|reminder|copy/i },
+  { tag:'cognitive games',tc:'t-focus',pat:/game|mind math|viyu|kramika|cognitive|ashutosh/i },
+  { tag:'research',     tc:'t-calls',  pat:/user call|interview|research|survey|whatsapp group/i },
+  { tag:'14-day trial', tc:'t-data',   pat:/14.?day|trial|free trial/i },
+];
+
+const PEOPLE = ['Ayush','Bala','Ritik','Ashutosh','Deba','Saurabh','Anshul','Yashi','Mariam','Debasish','Vaishnavi','Manish','Ankit','Arun','Himanshu'];
+
+function parseInput(text) {
+  // Default
+  let secId   = 'focus';
+  let secLabel = 'Focus Hour Work';
+  let secDot  = 'd-focus';
+  let tag     = '';
+  let tc      = 't-none';
+
+  // Match section
+  for (const rule of SECTION_RULES) {
+    if (rule.signals.test(text)) {
+      secId = rule.id; secLabel = rule.label; secDot = rule.dot;
+      break;
+    }
+  }
+
+  // Match tag
+  for (const rule of TAG_RULES) {
+    if (rule.pat.test(text)) { tag = rule.tag; tc = rule.tc; break; }
+  }
+
+  // Detect person mention for follow-up
+  const person = PEOPLE.find(p => new RegExp('\\b'+p+'\\b','i').test(text));
+
+  // Clean up task label — trim filler phrases
+  let label = text.trim();
+
+  return { secId, secLabel, secDot, tag, tc, person };
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function openSettings() {
+  if (document.getElementById('settingsOverlay')) return;
+  const ov = document.createElement('div');
+  ov.className = 'settings-overlay'; ov.id = 'settingsOverlay';
+  ov.innerHTML = `
+    <div class="settings-modal" onclick="event.stopPropagation()">
+      <div class="settings-title">AI Settings</div>
+      <div class="settings-label">Anthropic API Key</div>
+      <input class="settings-input" id="keyInput" type="password"
+        placeholder="sk-ant-..." value="${apiKey}" autocomplete="off"/>
+      <div class="settings-hint">Stored locally in your browser only. Never sent anywhere except Anthropic's API directly.</div>
+      <div class="settings-row">
+        <button class="settings-cancel" onclick="document.getElementById('settingsOverlay').remove()">Cancel</button>
+        <button class="settings-save" onclick="saveApiKey()">Save</button>
+      </div>
+    </div>`;
+  ov.onclick = () => ov.remove();
+  document.body.appendChild(ov);
+  setTimeout(() => document.getElementById('keyInput')?.focus(), 50);
+}
+
+function saveApiKey() {
+  const val = document.getElementById('keyInput').value.trim();
+  apiKey = val;
+  if (val) localStorage.setItem(API_KEY_STORE, val);
+  else localStorage.removeItem(API_KEY_STORE);
+  document.getElementById('settingsOverlay')?.remove();
+  renderChat();
+  showToast(val ? 'API key saved' : 'API key removed');
+}
+
+// ── AI parser ─────────────────────────────────────────────────────────────────
+async function parseWithAI(text) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      system: `You are a PM assistant for Khushi, Product Manager at Habuild (a health & wellness yoga app in India).
+
+Categorize her work inputs and answer her questions. Return ONLY valid JSON, no markdown, no code blocks.
+
+Work sections:
+- coord: Coordination Work — talking to/messaging colleagues, syncs, meetings, follow-ups, waiting on people
+- data: Data Work — pulling/checking/analyzing data, metrics, retention, conversion, dashboards, cohorts
+- calls: User Call Work — user interviews, research calls, feedback from users, speaking to users
+- focus: Focus Hour Work — reading docs, writing PRDs/specs, brainstorming, planning, thinking through strategy
+
+Available tags (pick closest or use ""): 14-day trial, A/B testing, TV app, cognitive games, research, notifications, homescreen
+Tag class map: 14-day trial→t-data | A/B testing→t-coord | TV app→t-coord | cognitive games→t-focus | research→t-calls | notifications→t-focus | homescreen→t-coord | ""→t-none
+
+People at Habuild: Ayush (engineer), Bala (mobile CRM), Ritik (video/content), Ashutosh (cognitive games), Deba (product designer), Himanshu, Saurabh Bhartia (founder/CEO)
+
+If input is a question or request for advice, set isQuestion:true and add a concise helpful "answer" field.
+If input describes a task or action, set isQuestion:false.
+
+Return JSON exactly like this:
+{"secId":"coord","label":"concise actionable task text","tag":"","tc":"t-none","person":null,"isQuestion":false,"answer":""}`,
+      messages: [{ role: 'user', content: text }]
+    })
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error?.message || `API ${res.status}`);
+  }
+  const j = await res.json();
+  const raw = j.content[0].text.trim().replace(/^```json?\s*/i,'').replace(/```\s*$/,'').trim();
+  return JSON.parse(raw);
+}
+
+// ── Chat render ───────────────────────────────────────────────────────────────
+function renderChat() {
+  document.querySelector('.chat-bar')?.remove();
+  document.querySelector('.toast')?.remove();
+
+  const bar = document.createElement('div');
+  bar.className = 'chat-bar';
+  const keySet = !!apiKey;
+  bar.innerHTML = `
+    <div class="chat-inner">
+      <div class="chat-preview" id="chatPreview">
+        <span style="color:#333">${keySet ? 'AI-powered — tell me what you did or need to do' : 'Set your API key (⚙) to enable AI'}</span>
+      </div>
+      <div class="chat-row">
+        <input class="chat-input" id="chatInput"
+          placeholder="${keySet ? 'e.g. Spoke to Himanshu about deeplink for acquisition...' : 'e.g. Spoke to Bala for Mobile CRM...'}" />
+        <button class="chat-send" id="chatSend" disabled>Add →</button>
+        <button class="settings-gear" onclick="openSettings()" title="AI Settings">
+          <span class="key-dot ${keySet ? 'set' : 'unset'}"></span>⚙
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(bar);
+
+  const toast = document.createElement('div');
+  toast.className = 'toast'; toast.id = 'toast';
+  document.body.appendChild(toast);
+
+  const input   = document.getElementById('chatInput');
+  const send    = document.getElementById('chatSend');
+  const preview = document.getElementById('chatPreview');
+
+  const DOT_COLORS = { 'd-data':'#3B82F6','d-coord':'#8B5CF6','d-calls':'#10B981','d-focus':'#F59E0B' };
+  const TAG_BG     = { 't-data':'#0d1f35','t-coord':'#160f2e','t-calls':'#071a12','t-focus':'#1a0d02','t-none':'#1a1a1a' };
+  const TAG_COLOR  = { 't-data':'#60a5fa','t-coord':'#a78bfa','t-calls':'#34d399','t-focus':'#fbbf24','t-none':'#555' };
+
+  // Live regex preview while typing
+  input.addEventListener('input', () => {
+    const val = input.value.trim();
+    send.disabled = val.length < 3;
+    if (val.length < 3) {
+      preview.innerHTML = `<span style="color:#333">${apiKey ? 'AI-powered — tell me what you did or need to do' : 'Set your API key (⚙) to enable AI'}</span>`;
+      preview.classList.remove('visible');
+      return;
+    }
+    const {secLabel, secDot, tag, tc} = parseInput(val);
+    const dotColor = DOT_COLORS[secDot] || '#888';
+    const tagHtml = tag ? `<span class="chat-preview-tag" style="background:${TAG_BG[tc]};color:${TAG_COLOR[tc]}">${tag}</span>` : '';
+    preview.classList.add('visible');
+    preview.innerHTML = `
+      <div class="chat-preview-dot" style="background:${dotColor}"></div>
+      <span class="chat-preview-cat">${secLabel}</span>
+      ${tagHtml}
+      <span style="color:#444;font-size:10px">— ${apiKey ? 'AI will refine →' : 'press Enter to add'}</span>
+    `;
+  });
+
+  // AI-powered add
+  const doAdd = async () => {
+    const val = input.value.trim();
+    if (val.length < 3) return;
+
+    // Loading state
+    send.disabled = true;
+    send.textContent = '...';
+    preview.classList.add('visible');
+    preview.innerHTML = `<div class="chat-thinking"><div class="think-dot"></div><div class="think-dot"></div><div class="think-dot"></div></div><span style="color:#555;margin-left:10px;font-size:11px">Thinking...</span>`;
+
+    let parsed;
+    try {
+      parsed = apiKey
+        ? await parseWithAI(val)
+        : { ...parseInput(val), label: val, isQuestion: false, answer: '' };
+    } catch(e) {
+      console.error('AI error:', e);
+      parsed = { ...parseInput(val), label: val, isQuestion: false, answer: '' };
+      showToast('AI unavailable — used smart parser');
+    }
+
+    // If it's a question, show the answer
+    if (parsed.isQuestion && parsed.answer) {
+      preview.innerHTML = `<div class="chat-ai-response">${parsed.answer}</div>`;
+      send.disabled = false;
+      send.textContent = 'Add →';
+      return;
+    }
+
+    // Add as task
+    const {secId, label, tag, tc, person} = parsed;
+    const sec = data.find(s => s.id === secId) || data.find(s => s.id === 'focus');
+    const task = { id: secId+'_'+Date.now(), label: label||val, tag: tag||'', tc: tc||'t-none', done: false };
+    sec.tasks.push(task);
+    save();
+
+    if (person && secId === 'coord') {
+      const exists = followups.find(f => f.name.toLowerCase() === person.toLowerCase());
+      if (!exists) {
+        followups.push({ id:'fu_'+Date.now(), name:person, initials:person.slice(0,2).toUpperCase(), desc:(label||val).slice(0,60), status:'waiting' });
+        saveFu();
+      }
+    }
+
+    render(); renderSide(); renderChat();
+    showToast(`Added to ${sec.label}`);
+    setTimeout(() => { const i = document.getElementById('chatInput'); if(i) i.focus(); }, 50);
+  };
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+  send.addEventListener('click', doAdd);
+}
+
+// ── My Work tab ───────────────────────────────────────────────────────────────
+const WORK_FILES=[
+  {id:"overview",title:"Work Plan",group:"Overview",sc:"ps-a",content:"# Habuild PM \u2014 Work Plan\n**Last updated**: Feb 23, 2026\n**Owner**: Khushi\n\n---\n\n## North Star\n> Figure out what to build with or apart from Yoga to add more value in users' health & wellness journey.\n\n---\n\n## This Week's Work Plan\n\n### Data Work\n- [ ] Pull 14-day free trial users data \u2014 activation, retention curve, drop-off, conversion\n- [ ] Check user call data for cognitive games (Viyu, Kramika, Mind Math)\n- [ ] Review weekly active user retention for games (when Ashutosh shares)\n\n### Coordination Work\n- [x] Messaged Ayush \u2014 A/B testing setup timeline *(waiting for response)*\n- [ ] Sync with Bala \u2014 Mobile CRM capabilities\n- [x] Messaged Ritik \u2014 TV app onboarding tutorial video brief *(waiting for response)*\n- [x] Messaged Ashutosh \u2014 cognitive games tasks *(waiting for response)*\n- [x] Spoke to Deba (product designer) \u2014 dynamic homescreen\n\n### User Call Work\n- [ ] Define screener + interview guide for user calls\n- [ ] Run first 2\u20133 user calls (goal: understand full wellness day)\n- [ ] User calls for cognitive games \u2014 W4\u2013W5 churn users *(coordinate with Ashutosh)*\n- [ ] User calls \u2014 users who clicked on share *(coordinate with Ashutosh)*\n\n### Focus Hour Work\n- [ ] Read Mind Math document\n- [ ] Read cognitive games research document + slides from Ashutosh\n- [ ] Think of unbiased cohort for difficulty testing (cognitive games)\n- [ ] Think through TV app GTM positioning + onboarding flow\n- [ ] Fill notification copy sheet by cohort \u2192 [sheet](https://docs.google.com/spreadsheets/d/1fF7VyVYsDEcQw_G2Hx9mYyDoQTH-Md8bWQI4rQ9IAMw/edit?usp=sharing)\n\n---\n\n## Priority Buckets\n\n| # | Bucket | Type | Status | Doc |\n| --- | --- | --- | --- | --- |\n| 1 | User Research | Strategic | Active | [01-user-research.md](./projects/01-user-research.md) |\n| 2 | 14-Day Free Trial Decision | Strategic | Needs data pull | [02-14-day-trial.md](./projects/02-14-day-trial.md) |\n| 3 | A/B Testing & Prototype Infrastructure | Enabler | In progress (Ayush) | [03-ab-testing-infra.md](./projects/03-ab-testing-infra.md) |\n| 4 | Dynamic Homescreen + Deeplink | Feature | Blocked on A/B setup | [04-dynamic-homescreen.md](./projects/04-dynamic-homescreen.md) |\n| 5 | Web Prototypes with Analytics | Feature | Needs scoping | [05-web-prototypes.md](./projects/05-web-prototypes.md) |\n| 6 | Notifications (CRM + PRD + Testing) | Incremental | Active | [06-notifications.md](./projects/06-notifications.md) |\n| 7 | TV App \u2014 GTM + Onboarding | Strategic | Active | [07-tv-app.md](./projects/07-tv-app.md) |\n| 8 | Cognitive Games | Feature | Active | [08-cognitive-games.md](./projects/08-cognitive-games.md) |\n\n---\n\n## 1. User Research\n**Goal**: Understand how Habuild can add more value in users' lives \u2014 beyond what they already get from yoga sessions.\n\n### To-Dos\n- [ ] Define research goals \u2014 what specific questions need answering from user calls\n- [ ] Set up a recurring user call cadence (target: 3\u20135 calls/week minimum)\n- [ ] Build a screener to identify right users to speak to (active users, lapsed users, power users)\n- [ ] Prepare interview guide for user calls\n- [ ] Expand research methods beyond calls:\n  - [ ] Design a Google Form survey \u2014 deploy via WhatsApp groups\n  - [ ] Identify 1\u20132 active WhatsApp groups to use for qualitative research\n  - [ ] Explore in-app survey or feedback mechanism\n- [ ] Synthesize findings after every 5 calls \u2014 identify patterns\n\n### Success Criteria\n- Clear picture of a Habuild user's full wellness day\n- Top 3 unmet needs identified with evidence\n- Enough signal to evaluate adjacency bets (sleep, nutrition, mental health, etc.)\n\n---\n\n## 2. 14-Day Free Trial Decision\n**Goal**: Use data to decide whether to build a 14-day free yoga experience natively within the app.\n\n### To-Dos\n- [ ] Pull data on 14-day free trial users:\n  - Activation rate (did they show up on Day 1?)\n  - Retention curve (Day 1 \u2192 Day 7 \u2192 Day 14)\n  - Drop-off points \u2014 which day do most users leave?\n  - Conversion rate (free \u2192 paid after trial)\n  - Behavior differences: trial users who converted vs. those who didn't\n- [ ] Identify what the current trial experience looks like (in-app vs. WhatsApp vs. YouTube)\n- [ ] Make the call: build in-app 14-day yoga or not\n- [ ] If yes \u2192 write brief spec and add to roadmap\n\n### Success Criteria\n- Data-backed go/no-go decision made\n- If go: clear definition of what \"14-day in-app experience\" means\n\n---\n\n## 3. A/B Testing & Prototype Infrastructure\n**Goal**: Get the technical foundation in place so ideas can be tested fast.\n**Owner**: Ayush (dependency \u2014 needs sync)\n\n### To-Dos\n- [ ] **This week**: Sync with Ayush \u2014 get timeline for A/B testing setup\n- [ ] Understand what the setup covers: what can be A/B tested, how variants are deployed, how results are read\n- [ ] Define the first experiment to run once setup is live\n- [ ] Document the process for running future experiments (so anyone can run a test)\n\n### Blocker Note\n> A/B setup is the prerequisite for Dynamic Homescreen, Web Prototypes, and Notification testing. Unblocking Ayush = unblocking everything else. **Prioritize this sync.**\n\n---\n\n## 4. Dynamic Homescreen with Deeplink\n**Goal**: User receives a deeplink (e.g. for Box Breathing) \u2192 homescreen reconfigures to show only that feature. Enables personalized, contextual entry points.\n**Blocked on**: A/B testing setup (#3)\n\n### To-Dos\n- [ ] Define the full use case \u2014 what triggers a deeplink? (notification, WhatsApp message, campaign?)\n- [ ] Map all deeplink destinations (box breathing, a workout, a challenge, etc.)\n- [ ] Write spec: homescreen behavior when deeplink is active vs. default state\n- [ ] Align with Ayush/dev on feasibility and implementation approach\n- [ ] Define success metric for this feature\n\n### Open Questions\n- Should the homescreen *fully* replace to show one item, or just highlight it prominently?\n- Does this need the A/B setup or can it be shipped independently?\n- Who sets the deeplinks \u2014 marketing, product, or automated?\n\n---\n\n## 5. Web Prototypes with Analytics\n**Goal**: Build fast web-based prototypes of new ideas with analytics baked in \u2014 test before committing to native development.\n\n### To-Dos\n- [ ] List the first 2\u20133 ideas to prototype (from user research findings)\n- [ ] Define what analytics are needed per prototype (what behavior to track)\n- [ ] Set up lightweight analytics (e.g. Mixpanel, PostHog, or GA4 on web)\n- [ ] Build first prototype \u2192 run with a cohort \u2192 read results\n- [ ] Define the \"pass/fail\" threshold for each prototype before building it\n\n### Success Criteria\n- Prototype \u2192 data \u2192 decision cycle running in under 2 weeks per idea\n\n---\n\n## 6. Notifications (Mobile CRM + PRD + Testing)\n**Goal**: Build a structured notification system with the right copy, targeting by cohort, and a way to test what works.\n**Type**: Incremental \u2014 time-box this, don't let it crowd strategic work.\n\n### To-Dos\n- [ ] Speak to Bala re: Mobile CRM \u2014 understand capabilities and limitations\n- [ ] Fill the [Notification Copy Sheet](https://docs.google.com/spreadsheets/d/1fF7VyVYsDEcQw_G2Hx9mYyDoQTH-Md8bWQI4rQ9IAMw/edit?usp=sharing):\n  - Organize by user cohort (new user, active user, lapsed user, trial user, etc.)\n  - Write copy variants per cohort\n  - Tag by goal (re-engagement, habit nudge, feature discovery, upsell)\n- [ ] Write Notification PRD:\n  - Notification types and triggers\n  - Cohort targeting logic\n  - Frequency caps\n  - Success metrics (CTR, session starts, conversion)\n- [ ] Design notification A/B test plan (dependent on A/B setup being live)\n\n### Time-box\n> Max 2\u20133 hours/week on this until A/B setup is live. Don't let this become a full sprint.\n\n---\n\n## This Week \u2014 Suggested Focus\n\n| Day | Focus |\n| --- | --- |\n| Mon/Tue | Sync with Ayush (A/B timeline) + Sync with Bala (Mobile CRM) |\n| Tue/Wed | Pull 14-day trial data + start analysis |\n| Wed\u2013Fri | Run first 2\u20133 user calls |\n| Ongoing | Fill notification copy sheet (30 min/day) |\n| Ongoing | Read cognitive games docs (Mind Math doc + research doc + slides from Ashutosh) |\n\n---\n\n## 8. Cognitive Games\n**Goal**: Improve engagement, difficulty calibration, and discovery for Viyu, Kramika, and Mind Math.\n**Collaborator**: Ashutosh Dwivedi\n\n### Khushi's To-Dos\n- [ ] Read Mind Math document\n- [ ] Read research document\n- [ ] Read slides (from Ashutosh)\n- [ ] Think of unbiased cohort for difficulty testing\n- [ ] Discovery \u2014 make game discovery frictionless\n- [ ] A/B testing setup (linked to [03-ab-testing-infra.md](./projects/03-ab-testing-infra.md))\n- [ ] User calls \u2014 data check\n\n### Follow Up with Ashutosh\n- [ ] Receive user call sheet + slides\n- [ ] Review Google Form for feedback/validation\n- [ ] Check progress on community joining touch point (web flow)\n- [ ] Review weekly active user retention data when shared\n\n### See Full Doc\n\u2192 [08-cognitive-games.md](./projects/08-cognitive-games.md)\n\n---\n\n## 7. TV App \u2014 GTM + Onboarding\n**Goal**: Launch the TV app successfully and ensure users know about it and can get started with it easily.\n\n### To-Dos\n\n**GTM**\n- [ ] Define target audience for TV app \u2014 who is this for? (existing members? new segment? family use?)\n- [ ] Map distribution channels: how will users discover the TV app? (in-app nudge, WhatsApp, email, social?)\n- [ ] Define launch moment \u2014 soft launch vs. full launch, phased rollout?\n- [ ] Think through positioning: what is the TV experience uniquely good for vs. phone? (bigger screen for yoga form, family sessions, living room practice?)\n- [ ] Write GTM one-pager for alignment with team\n\n**Video**\n- [ ] Speak to Ritik \u2014 understand what video is needed (promo video? tutorial? onboarding video? TV-specific content?)\n- [ ] Define video brief based on GTM and onboarding needs\n\n**Onboarding**\n- [ ] Map the TV app first-time user journey \u2014 what does a new user see and do in the first 5 minutes?\n- [ ] Identify friction points specific to TV (no touch input, remote navigation, account login flow)\n- [ ] Define onboarding success metric (e.g. first session completed, content browsed)\n- [ ] Write onboarding spec / user flow\n\n### Decisions Made\n- TV app is for **existing members** \u2014 bigger screen experience, not a new acquisition surface\n- **Included in existing membership** \u2014 no separate pricing\n- Ritik's video brief: **onboarding tutorial \u2014 how to download the TV app**\n\n### Open Questions\n- None currently \u2014 all answered below\n\n### Decisions Made\n- TV app is for **existing members** \u2014 bigger screen experience, not a new acquisition surface\n- **Included in existing membership** \u2014 no separate pricing\n- Ritik's video brief: **onboarding tutorial \u2014 how to download the TV app**\n- **Platforms**: Android TV, Fire TV, Samsung Tizen \u2014 all except iOS/Apple TV\n- **Content**: TV-optimized (not just mirrored from app)\n- **Login**: Enter phone number on TV \u2014 needs improvement (flagged as UX problem)\n\n### Login UX \u2014 Problem to Solve\nCurrent: User enters phone number on TV using remote (painful)\nBetter options to explore:\n- QR code on TV screen \u2192 scan with phone \u2192 auto-login\n- OTP sent to WhatsApp/SMS \u2192 enter on TV\n- Companion app flow: initiate login on phone, confirm on TV\n\n---\n\n## Parking Lot\n*Ideas / tasks that matter but have no immediate action yet*\n- Define full adjacency bets (sleep, nutrition, mental health, etc.) \u2014 after user research Phase 1\n- Roadmap planning for H1 2026\n- Spec for 14-day in-app yoga (if data says go)\n\n---\n\n## Dependency Map\n\n```\nAyush: A/B Testing Setup\n         \u251c\u2500\u2500 Dynamic Homescreen + Deeplink\n         \u251c\u2500\u2500 Web Prototype Testing\n         \u2514\u2500\u2500 Notification A/B Testing\n\nUser Research (calls + surveys)\n         \u2514\u2500\u2500 Adjacency bets \u2192 what to prototype\n\n14-Day Trial Data\n         \u2514\u2500\u2500 In-app 14-day yoga: build or skip\n\nBala: Mobile CRM\n         \u2514\u2500\u2500 Notification PRD + targeting\n```\n"},
+  {id:"user-research",title:"01 User Research",group:"Projects",sc:"ps-a",content:"# User Research\n**Owner**: Khushi\n**Type**: Strategic\n**Status**: Active\n**Last updated**: Feb 23, 2026\n\n---\n\n## Goal\nUnderstand how Habuild can add more value in users' lives \u2014 beyond what they already get from yoga sessions. Build evidence base for what to build next.\n\n---\n\n## To-Dos\n\n### Research Setup\n- [ ] Define research goals \u2014 what specific questions need answering from user calls\n- [ ] Build a screener to identify right users to speak to (active users, lapsed users, power users)\n- [ ] Prepare interview guide for user calls\n- [ ] Set up a recurring user call cadence (target: 3\u20135 calls/week)\n\n### Research Methods to Set Up\n- [ ] Google Form survey \u2014 deploy via WhatsApp groups\n- [ ] Identify 1\u20132 active WhatsApp groups to use for qualitative research\n- [ ] Explore in-app survey or feedback mechanism\n\n### Ongoing\n- [ ] Run user calls\n- [ ] Synthesize findings after every 5 calls \u2014 identify patterns\n- [ ] Update findings doc as research progresses\n\n---\n\n## Research Questions (To be refined)\n- What does a Habuild user's full wellness day look like?\n- What do they do for health outside of Habuild sessions?\n- Where do they feel underserved or unsupported?\n- What has stopped them from being more consistent?\n- What would make Habuild more indispensable to their daily life?\n\n---\n\n## Findings\n*To be updated as research progresses*\n\n---\n\n## Synthesis\n*Top themes, patterns, unmet needs \u2014 to be filled after first round of calls*\n\n---\n\n## Success Criteria\n- Clear picture of a Habuild user's full wellness day\n- Top 3 unmet needs identified with evidence\n- Enough signal to evaluate adjacency bets (sleep, nutrition, mental health, etc.)\n"},
+  {id:"trial",title:"02 14-Day Trial",group:"Projects",sc:"ps-w",content:"# 14-Day Free Trial \u2014 Data Analysis & Decision\n**Owner**: Khushi\n**Type**: Strategic\n**Status**: Needs data pull\n**Last updated**: Feb 23, 2026\n\n---\n\n## Goal\nUse data to decide whether to build a 14-day free yoga experience natively within the app.\n\n---\n\n## To-Dos\n\n### Data Pull\n- [ ] Pull data on 14-day free trial users:\n  - Activation rate (did they show up on Day 1?)\n  - Retention curve (Day 1 \u2192 Day 7 \u2192 Day 14)\n  - Drop-off points \u2014 which day do most users leave?\n  - Conversion rate (free trial \u2192 paid after trial)\n  - Behavior differences: users who converted vs. those who didn't\n- [ ] Map current trial experience \u2014 what does it look like today? (in-app vs. WhatsApp vs. YouTube)\n\n### Analysis\n- [ ] Identify where users drop off and why\n- [ ] Compare behavior of converted vs. churned trial users\n- [ ] Check if in-app trial would improve any of these metrics\n\n### Decision\n- [ ] Make the call: build in-app 14-day yoga or not\n- [ ] If yes \u2192 write brief spec and add to roadmap\n\n---\n\n## Key Metrics to Track\n| Metric | Current | Target |\n|---|---|---|\n| Day 1 activation rate | ? | |\n| Day 7 retention | ? | |\n| Day 14 completion | ? | |\n| Trial \u2192 paid conversion | ? | |\n\n---\n\n## Decision Framework\n**Build in-app 14-day trial IF:**\n- Drop-off is happening because the current experience is fragmented (WhatsApp + YouTube + app)\n- Users who complete 14 days convert at a significantly higher rate\n- In-app experience can meaningfully improve completion rate\n\n**Skip IF:**\n- Current trial conversion is already strong\n- Drop-off is about motivation/intent, not experience quality\n- Engineering cost outweighs conversion uplift\n\n---\n\n## Decision\n*To be filled after data analysis*\n\n---\n\n## Next Steps if Go\n- Write spec for 14-day in-app yoga experience\n- Define content structure (which sessions, in what order)\n- Define habit-building hooks within the 14-day journey\n"},
+  {id:"ab-testing",title:"03 A/B Testing Infra",group:"Projects",sc:"ps-w",content:"# A/B Testing & Prototype Infrastructure\n**Owner**: Khushi (PM) / Ayush (Dev)\n**Type**: Enabler\n**Status**: In progress \u2014 blocked on Ayush sync\n**Last updated**: Feb 23, 2026\n\n---\n\n## Goal\nGet the technical foundation in place so ideas can be tested fast without full native builds.\n\n---\n\n## Why This Matters\nThis infrastructure unblocks:\n- Dynamic Homescreen + Deeplink testing\n- Web Prototype testing\n- Notification A/B testing\n- Any future fast experimentation\n\n---\n\n## To-Dos\n\n### This Week\n- [x] **Messaged Ayush** \u2014 Feb 23 *(waiting for timeline response)*\n\n### Post-Sync\n- [ ] Understand what the setup covers:\n  - What can be A/B tested?\n  - How are variants deployed?\n  - How are results read and by whom?\n- [ ] Define the first experiment to run once setup is live\n- [ ] Document the process for running future experiments\n\n---\n\n## Questions for Ayush\n- What's the expected timeline for the A/B setup to be live?\n- What tool/framework are we using? (Firebase Remote Config? Custom? Third-party?)\n- What are the constraints \u2014 what can and can't be tested?\n- What does the PM workflow look like \u2014 can I set up experiments without dev involvement?\n- How do we read results \u2014 is there a dashboard?\n\n---\n\n## First Experiment Ideas (for when infra is live)\n*To be prioritized once timeline is confirmed*\n- Dynamic homescreen variant vs. default\n- Notification copy A vs. B\n- Onboarding flow variant\n\n---\n\n## Dependencies\n- Blocks: Dynamic Homescreen, Web Prototypes, Notification Testing\n- Blocked by: Ayush sync + dev capacity\n"},
+  {id:"homescreen",title:"04 Dynamic Homescreen",group:"Projects",sc:"ps-d",content:"# Dynamic Homescreen with Deeplink\n**Owner**: Khushi\n**Type**: Feature\n**Status**: In discussion with Deba (designer)\n**Last updated**: Feb 23, 2026\n\n---\n\n## Goal\nUser receives a deeplink (e.g. for Box Breathing) \u2192 homescreen reconfigures to show only that feature. Enables personalized, contextual entry points into the app.\n\n---\n\n## Use Case\nA user receives a WhatsApp message or push notification with a deeplink to Box Breathing. When they tap it and open the app, the homescreen shows only Box Breathing \u2014 not the full default homescreen. This reduces cognitive load and drives the intended action.\n\n---\n\n## To-Dos\n- [x] Spoke to Deba (product designer) \u2014 Feb 23\n- [ ] Define all deeplink destinations (box breathing, a specific workout, a challenge, onboarding step, etc.)\n- [ ] Map triggers: what sends a deeplink? (notification, WhatsApp, campaign, email?)\n- [ ] Write spec: homescreen behavior when deeplink is active vs. default state\n- [ ] Align with Ayush/dev on feasibility and implementation\n- [ ] Define success metric\n- [ ] Test via A/B setup once infra is live\n\n---\n\n## Open Questions\n- Should the homescreen *fully replace* to show one item, or just highlight/pin it prominently?\n- Does this need the A/B setup or can it be shipped independently?\n- Who sets the deeplinks \u2014 marketing, product, or automated/rule-based?\n- How long does the deeplink state persist? (one session? until action is completed?)\n- What happens if the user navigates away \u2014 do they return to default homescreen?\n\n---\n\n## Deeplink Destination Candidates\n| Destination | Trigger scenario |\n| --- | --- |\n| Box Breathing | Stress/anxiety notification, evening wind-down nudge |\n| Today's yoga session | Morning session reminder |\n| Active challenge | Mid-challenge drop-off re-engagement |\n| Physiotherapy booking | Pain-related nudge |\n| A specific workout | Personalized recommendation |\n\n---\n\n## Success Metric\n- [ ] To be defined (likely: completion rate of deeplinked action vs. baseline)\n\n---\n\n## Dependencies\n- Blocked by: A/B Testing Setup (#03)\n"},
+  {id:"web-prototypes",title:"05 Web Prototypes",group:"Projects",sc:"ps-s",content:"# Web Prototypes with Analytics\n**Owner**: Khushi\n**Type**: Feature / Experimentation\n**Status**: Needs scoping\n**Last updated**: Feb 23, 2026\n\n---\n\n## Goal\nBuild fast web-based prototypes of new product ideas with analytics baked in. Test user behavior and validate hypotheses before committing to native app development.\n\n---\n\n## Why Web Prototypes\n- Faster to build than native\n- Easier to iterate\n- Analytics can be instrumented quickly\n- Can be shared via WhatsApp/link (no App Store update needed)\n- Lower engineering cost = more bets can be tested\n\n---\n\n## To-Dos\n\n### Setup\n- [ ] Choose analytics tool for web prototypes (Mixpanel, PostHog, or GA4)\n- [ ] Set up lightweight analytics stack\n- [ ] Define standard events to track across all prototypes\n\n### Per Prototype\n- [ ] Define the idea to prototype (driven by user research findings)\n- [ ] Define what behavior/analytics to track\n- [ ] Set pass/fail threshold *before* building\n- [ ] Build \u2192 deploy \u2192 share with cohort\n- [ ] Read results \u2192 decide: build native, iterate, or kill\n\n---\n\n## Prototype Ideas (To be filled from user research)\n*Populate after Phase 1 user research is complete*\n\n| Idea | Hypothesis | Key metric | Status |\n|---|---|---|---|\n| TBD | | | Pending research |\n\n---\n\n## Analytics Events Template (per prototype)\n- Page/screen view\n- Primary CTA clicked\n- Flow completion\n- Drop-off point\n- Time on page/feature\n- Return visits\n\n---\n\n## Pass/Fail Framework\nBefore building each prototype, define:\n1. **What success looks like** (e.g. 40%+ completion rate)\n2. **What failure looks like** (e.g. <20% engage beyond first screen)\n3. **Sample size needed** to be confident in the result\n4. **Time window** for the test (e.g. 7 days)\n\n---\n\n## Dependencies\n- Informed by: User Research (#01)\n- Enabled by: A/B Testing Setup (#03) for randomized cohort assignment\n"},
+  {id:"notifications",title:"06 Notifications",group:"Projects",sc:"ps-a",content:"# Notifications \u2014 Mobile CRM + PRD + Testing\n**Owner**: Khushi\n**Type**: Incremental\n**Status**: Active\n**Last updated**: Feb 23, 2026\n\n---\n\n## Goal\nBuild a structured notification system with the right copy, cohort-based targeting, and a way to test what works. Drive re-engagement, habit consistency, and feature discovery.\n\n---\n\n## Time-box\n> Max 2\u20133 hours/week on this until A/B setup is live. Don't let this crowd strategic work.\n\n---\n\n## To-Dos\n\n### Stakeholder Syncs\n- [ ] Speak to Bala \u2014 understand Mobile CRM capabilities and limitations\n\n### Copy & Targeting\n- [ ] Fill the [Notification Copy Sheet](https://docs.google.com/spreadsheets/d/1fF7VyVYsDEcQw_G2Hx9mYyDoQTH-Md8bWQI4rQ9IAMw/edit?usp=sharing):\n  - Organize by user cohort\n  - Write copy variants per cohort\n  - Tag by goal (re-engagement, habit nudge, feature discovery, upsell)\n\n### PRD\n- [ ] Write Notification PRD (see structure below)\n\n### Testing\n- [ ] Design notification A/B test plan\n- [ ] Run tests once A/B setup is live (#03)\n\n---\n\n## User Cohorts for Notifications\n| Cohort | Definition | Notification Goal |\n|---|---|---|\n| New user (Day 0\u20133) | Just signed up | Activation \u2014 get to first session |\n| Active user | Sessions in last 7 days | Habit reinforcement |\n| At-risk user | No session in 7\u201314 days | Re-engagement |\n| Lapsed user | No session in 14+ days | Win-back |\n| Trial user (14-day) | In free trial | Convert to paid |\n| Post-trial (unconverted) | Trial ended, didn't pay | Conversion nudge |\n\n---\n\n## Notification Types\n| Type | Trigger | Goal |\n|---|---|---|\n| Session reminder | Time-based (user's usual session time) | Habit consistency |\n| Streak nudge | User about to break streak | Retention |\n| Re-engagement | X days of inactivity | Win-back |\n| Feature discovery | User hasn't tried feature Y | Engagement depth |\n| Milestone celebration | Completed N sessions | Positive reinforcement |\n| Upsell | Trial day 12\u201314 | Conversion |\n\n---\n\n## Notification PRD Structure (To be written)\n- [ ] Notification types and triggers\n- [ ] Cohort targeting logic\n- [ ] Frequency caps (per day, per week)\n- [ ] Opt-out / permission handling\n- [ ] Success metrics: CTR, session starts, conversion rate\n- [ ] A/B testing framework for copy\n\n---\n\n## Questions for Bala\n- What does Mobile CRM currently support?\n- Can we target by cohort / user behavior?\n- What's the current notification send volume and open rates?\n- What are the frequency cap rules today?\n- Can we A/B test notification copy natively in the CRM?\n\n---\n\n## Dependencies\n- Blocked by (for testing): A/B Testing Setup (#03)\n- Stakeholder: Bala (Mobile CRM)\n"},
+  {id:"tv-app",title:"07 TV App",group:"Projects",sc:"ps-a",content:"# TV App \u2014 GTM + Onboarding\n**Owner**: Khushi\n**Type**: Strategic\n**Status**: Active \u2014 in thinking phase\n**Last updated**: Feb 23, 2026\n\n---\n\n## Goal\nLaunch the TV app successfully for existing Habuild members. Ensure they know it exists, can set it up easily, and get value from the bigger screen experience.\n\n---\n\n## Decisions Made\n| Question | Answer |\n|---|---|\n| Who is it for? | Existing Habuild members (bigger screen experience) |\n| Separate subscription? | No \u2014 included in existing membership |\n| Platforms | Android TV, Fire TV, Samsung Tizen (all except iOS/Apple TV) |\n| Content | TV-optimized (not just mirrored from app) |\n| Login method | Enter phone number on TV \u2014 needs improvement |\n| Ritik's deliverable | Onboarding tutorial video \u2014 how to download the TV app |\n\n---\n\n## Login UX Problem\n**Current**: User enters phone number on TV using remote \u2014 painful and causes drop-off.\n\n**Options to explore**:\n| Option | How it works | Effort | Notes |\n|---|---|---|---|\n| QR code flow | TV shows QR \u2192 scan with phone \u2192 auto-login | Medium | Industry standard (YouTube, Netflix), best UX |\n| WhatsApp OTP | TV shows a short code \u2192 OTP sent on WhatsApp \u2192 enter on TV | Low | On-brand with Habuild's WhatsApp-first DNA |\n| Companion app flow | User initiates on phone app \u2192 TV confirms | High | Best long-term, heavy to build |\n\n**Recommendation**: WhatsApp OTP as quick fix, QR code as next iteration.\n\n---\n\n## GTM\n\n### To-Dos\n- [ ] Define positioning: what is the TV experience uniquely good for vs. phone?\n  - Bigger screen for better yoga form visibility\n  - Family/group sessions in the living room\n  - More immersive practice environment\n- [ ] Map activation channels for existing members:\n  - In-app nudge / banner\n  - WhatsApp broadcast to all active members\n  - Push notification\n  - Email (if applicable)\n- [ ] Define launch type: soft launch \u2192 full launch, or phased by platform?\n- [ ] Write GTM one-pager for team alignment\n- [ ] Define GTM success metric (e.g. X% of active members install TV app within 30 days)\n\n### GTM Message Ideas\n- \"Practice yoga on your big screen \u2014 download the Habuild TV app\"\n- \"Your living room is now your yoga studio\"\n- \"Same membership, bigger experience\"\n\n---\n\n## Onboarding\n\n### To-Dos\n- [ ] Map the TV app first-time user journey (what does a new user see in first 5 minutes?)\n- [ ] Identify friction points specific to TV:\n  - Login flow (biggest risk)\n  - Remote navigation (no touch input)\n  - Account discovery (finding content with a remote)\n- [ ] Solve login UX (QR or WhatsApp OTP \u2014 see above)\n- [ ] Write onboarding spec / user flow\n- [ ] Define onboarding success metric (e.g. first session completed)\n\n### Onboarding Flow (Draft)\n```\nOpen TV app\n     \u2193\nWelcome screen\n     \u2193\nLogin (enter phone \u2192 WhatsApp OTP or QR scan)\n     \u2193\nMembership confirmed \u2192 welcome message\n     \u2193\nFirst session prompt (what do you want to do today?)\n     \u2193\nFirst session completed \u2713\n```\n\n---\n\n## Video Brief for Ritik\n\n**Deliverable**: Onboarding tutorial video \u2014 how to download and set up the Habuild TV app\n\n**Contents to cover**:\n1. Which platforms it's available on (Android TV, Fire TV, Samsung Tizen)\n2. How to find and download the app on each platform\n3. How to log in (phone number + OTP)\n4. What to expect first time \u2014 where to find sessions\n\n**Format**: Short, step-by-step screen recording / walkthrough (2\u20133 mins max)\n**Tone**: Simple, warm, beginner-friendly (same as Habuild's overall voice)\n\n**To-Do**:\n- [ ] Brief Ritik with the above\n- [ ] Review script/storyboard before recording\n- [ ] Define where the video will live (in-app onboarding? WhatsApp broadcast? YouTube?)\n\n---\n\n## Open Questions\n- Which platform to launch first \u2014 Android TV, Fire TV, or Samsung Tizen?\n- Should the TV app have its own section in the main app for discovery?\n- What TV-optimized content exists today vs. what needs to be created?\n\n---\n\n## Dependencies\n- Ritik: Video production\n- Dev: Login UX improvement\n- Content team: TV-optimized content\n"},
+  {id:"cog-games",title:"08 Cognitive Games",group:"Projects",sc:"ps-a",content:"# Cognitive Games\n**Owner**: Khushi (PM) / Ashutosh Dwivedi\n**Type**: Feature \u2014 Active Development\n**Status**: Active\n**Last updated**: Feb 23, 2026\n**Meeting notes source**: [16 Feb 2026 meeting doc](https://docs.google.com/document/d/1aAtW0wBVTN76V93Dn7LZpHKOOwaSgFYpYIAw5h4E88s/edit?usp=sharing)\n\n---\n\n## Games Overview\n\n| Game | Released | Play Frequency | D30 Retention |\n| --- | --- | --- | --- |\n| Viyu | Oct 2025 | Multiple per day | 15% |\n| Kramika | Nov 2025 | Multiple per day | 15% |\n| Mind Math | Jan 2026 | Once per day | 30% |\n\n### Key Insight from Meeting\n- D30 for Mind Math (30%) is double Viyu/Kramika (15%) \u2014 worth investigating why\n- **Difficulty problem**: People find games easy but won't say so explicitly \u2014 user bias in self-reporting makes it hard to measure true difficulty perception\n- Each game targets different cognitive abilities \u2014 needs to be documented clearly\n\n---\n\n## Khushi's To-Dos\n\n### Reading & Context Building\n- [ ] Read Mind Math document\n- [ ] Read research document\n- [ ] Read slides Ashutosh sends\n\n### Research & Analysis\n- [ ] User calls \u2014 data check (cross-reference with user call findings)\n- [ ] Think of unbiased cohort for difficulty testing\n\n### Product\n- [ ] Discovery \u2014 make frictionless (how users find and get to games)\n- [ ] A/B testing setup (also tracked in [03-ab-testing-infra.md](./03-ab-testing-infra.md))\n\n---\n\n## Ashutosh's To-Dos (Track for follow-up)\n- [ ] Challenge 85 vs 84 or less \u2014 highest attendance rate % (TDT analysis)\n- [ ] Think of unbiased cohort for difficulty testing\n- [ ] Weekly active user retention data for games\n- [ ] User bias analysis: first game play time vs. second vs. last \u2014 validate with data\n- [ ] How many times/week + last played \u2014 validate with data\n- [ ] Time vs. difficulty level correlation \u2014 pull data\n- [ ] Think of A/B test for difficulty\n- [ ] Send user call sheet + slides\n- [ ] Google Form for feedback/validation\n- [ ] Community joining touch point in the web flow\n- [ ] User calls \u2014 W4\u2013W5 churn users\n- [ ] User calls \u2014 users who've clicked on share\n\n---\n\n## Open Questions & Problems to Solve\n\n### Difficulty Calibration\n- How do we objectively measure if a game is too easy without relying on self-report?\n- What does an unbiased cohort for difficulty testing look like?\n- How do we design an A/B test for difficulty levels?\n\n### Retention Gap\n- Why does Mind Math (1x/day) retain at 30% vs. Viyu/Kramika (multiple/day) at 15%?\n- Is the higher retention because of the once-a-day constraint creating more perceived value?\n- Or is Mind Math just a better-designed game?\n\n### Discovery\n- How are users currently finding games within the app?\n- Where is the drop-off in the discovery \u2192 first play funnel?\n- What does \"frictionless discovery\" look like specifically?\n\n### Cognitive Mapping\n- What cognitive ability does each game target?\n  - Viyu: ?\n  - Kramika: ?\n  - Mind Math: ?\n- Are we covering the right cognitive domains for our user base?\n\n---\n\n## Data to Track\n| Metric | Viyu | Kramika | Mind Math |\n| --- | --- | --- | --- |\n| D30 retention | 15% | 15% | 30% |\n| Weekly active users | ? | ? | ? |\n| Avg plays/week | ? | ? | ? |\n| Avg session time | ? | ? | ? |\n| % who played >1x on Day 1 | ? | ? | ? |\n| Share button click rate | ? | ? | ? |\n\n---\n\n## Notes\n- User calls planned for W4\u2013W5 focused on churn + share-clickers \u2014 coordinate with Ashutosh\n- Community joining touch point in web flow is Ashutosh's work \u2014 follow up on progress\n- Google Form for feedback/validation \u2014 Ashutosh to set up, Khushi to review questions\n"},
+  {id:"content-cat",title:"09 Content Cat.",group:"Projects",sc:"ps-a",content:"# Content Categorisation\n**Owner**: Khushi\n**Type**: Strategic \u2014 Research & Product Direction\n**Status**: Active \u2014 Brainstorming\n**Last updated**: Feb 23, 2026\n**Source**: Content categorisation.xlsx (YT videos raw + categorisation sheets)\n\n---\n\n## What We Have\n\n### YouTube Content Categories & Performance\n\n| Category | Top Video | Views | Signal Strength |\n| --- | --- | --- | --- |\n| Pranayama & Breathing | Daily Pranayama under 15 mins | 7.8M | \u2b50\u2b50\u2b50\u2b50\u2b50 |\n| Yoga for Pain Relief | Knee Pain Relief in Hindi | 4.3M | \u2b50\u2b50\u2b50\u2b50\u2b50 |\n| Fitness Routines | Daily Exercise for Parents | 4.7M | \u2b50\u2b50\u2b50\u2b50\u2b50 |\n| Nutrition & Wellness | 10 Signs of Nutrient Deficiency | 3.1M | \u2b50\u2b50\u2b50\u2b50 |\n| Meditation & Mindfulness | Yog Nidra for Deep Sleep | 2.7M | \u2b50\u2b50\u2b50\u2b50 |\n| Weight Loss | Only Way to Reduce Belly Fat | 1.8M | \u2b50\u2b50\u2b50 |\n| Specialized Yoga | Eye Yoga, Chair Yoga, Kegel | 2.5M | \u2b50\u2b50\u2b50 |\n\n### Full Category Breakdown\n- Pranayama & Breathing: 7.8M, 1.7M, 1.4M, 1.4M, 1M, 979K...\n- Pain Relief Yoga: 4.3M, 3.1M, 2.6M, 1.4M, 1.2M, 1.1M, 1.1M, 1M, 832K, 768K...\n- Fitness Routines: 4.7M, 3.9M, 2.8M, 2.5M, 1.5M, 1.1M, 979K, 803K...\n- Nutrition & Wellness: 3.1M, 2.5M, 1.4M, 1.2M, 1M, 924K, 791K...\n- Meditation & Mindfulness: 2.7M, 1.2M, 903K, 973K...\n- Weight Loss: 1.8M, 965K, 922K, 890K...\n- Specialized Yoga: 2.5M, 2.2M, 1M, 1M...\n\n---\n\n## Strategic Direction Decided\n**New daily touchpoints** \u2014 not extending yoga, but creating new moments in the day.\n\n## Daily Touchpoint Map\n\n| Time | Touchpoint | Demand | Effort | Priority |\n| --- | --- | --- | --- | --- |\n| 7:15 AM | Post-yoga breathing (cool down) | High | Very Low | Quick win |\n| 11:00 AM | Mid-morning desk stretch / eye yoga | Medium | Low | Later |\n| 1:00 PM | Midday nutrition tip | Medium | Low | Test it |\n| 3:00 PM | Afternoon stress break (box breathing) | Medium | Very Low | Maybe |\n| 9:00 PM | Pre-sleep wind-down (Yog Nidra + Breathing) | \ud83d\udd25 High | Medium | \u2b50 Build this |\n| Evening | Cognitive games as brain wind-down habit | High | None | \u2b50 Reposition now |\n\n## Strongest Bets\n\n### 1. Pre-Sleep Wind Down \u2b50\n- 10-min guided night routine: pranayama + Yog Nidra\n- Yog Nidra: 2.7M YT views. Bedtime yoga: 973K. Meditation: 1.2M+\n- Creates second anchor habit at opposite end of day\n- Different emotional need: restore vs. energise (morning)\n- Only Habuild can own morning + evening for this user\n\n### 2. Cognitive Games as Evening Ritual \u2b50\n- Already built \u2014 Viyu, Kramika, Mind Math\n- Reframe: \"Evening brain wind-down\" not a random feature\n- Mind Math's 30% D30 (once/day constraint) proves daily habit works\n- Zero build effort \u2014 messaging + placement change only\n\n## Long-Term Vision\n> **Habuild Daily Ritual** = Morning energise (yoga) + Evening restore (wind-down)\n> Two anchors. Defensible. Cult.fit can't do it. Calm can't do it. Only Habuild can.\n\n## Open Questions\n- Does SB record content specifically for app, or is everything repurposed from YT?\n- What is the current Strong Everyday (evening batch) retention?\n- Which touchpoint feels strongest from user call evidence?\n\n## To-Dos\n- [ ] Answer the 3 open questions above\n- [ ] Design the pre-sleep wind-down flow (content + habit loop)\n- [ ] Reposition cognitive games as evening habit in app (placement + notification)\n- [ ] Map content gaps \u2014 what needs to be recorded vs. what already exists\n- [ ] Define content strategy: app vs. YT vs. WhatsApp per touchpoint\n"},
+  {id:"product-direction",title:"Product Direction Data",group:"Research",sc:"ps-d",content:"# App Product Direction \u2014 Data Summary\n**Source**: App - Product Direction.xlsx + App Pod Demo Feb 12.pptx\n**Last updated**: Feb 23, 2026\n\n---\n\n## Active Work Areas (from Work View sheet)\n\n| Area | Next Steps | Owner |\n|---|---|---|\n| App Retention | Why do people stop using app? What were their expectations? What keeps them retained? | User Calls \u2014 Khushi |\n| Free Users Behaviour | Retention, app usage, conversions. Data summary. Comparative analysis (ads/channel split). Cohort identification | Saurabh Shah |\n| YE Retention | Right way to measure retention, compare with WA data | Yashi Jain |\n| WAU Definition on App | Frequency of opening app, improve median, bottom 10% users direction | TBD |\n| New User Acquisition | 14-day free journey, after how many sessions user likely to pay, day of week joining vs attendance/conversion, onboarding validation | Debasish / Mariam |\n| Unit Economics | App unit economics | Ankit Bhatia |\n\n---\n\n## Problem Statements Being Investigated\n\n- App retention with moms 45+ (Paid members)\n- App retention with moms 45+ (Free members)\n- App acquisition \u2014 performance marketing\n- Acquisition for younger cohort (w/o WhatsApp)\n- International experience/acquisition\n\n---\n\n## Future Bets (Parking Lot from Product Direction)\n\n- Breathing app for younger audience\n- International experience\n- TV app (already in projects)\n\n---\n\n## YE Retention Data (Weekly Cohort)\n\n| Week | Base | Mon 1 | Mon 2 | Mon 3 | Mon 4 | Mon 5 |\n|---|---|---|---|---|---|---|\n| Mon 2 | 3895 | 645 (16.6%) | 497 (12.8%) | 501 (12.9%) | 422 (10.8%) | 350 (9%) |\n| Mon 3 | 2725 | 492 (18%) | 439 (16.1%) | 341 (12.5%) | 329 (12.1%) | 186 |\n| Mon 4 | 1341 | 207 (15.4%) | 133 (9.9%) | 131 (9.8%) | 67 | \u2014 |\n| Mon 5 | 982 | 110 (11.2%) | 81 (8.2%) | 39 | \u2014 | \u2014 |\n\n**Insight**: Retention drops sharply after Week 1. Mon 2 is the critical cliff.\n\n---\n\n## App Pod Demo \u2014 Feb 12 Directions\n\n### Short Term: Existing Value Enhancement\n**Breathing Feature**\n- Improve CTR via notification experiments (content + image)\n- Improve completion rate \u2192 move to time-based measurement\n- Introduce streaks for breathing\n- Deeplink capability for integrating in WA/YT journey\n- Figure out how to improve *intent* of breathing users\n- Completion % experiments with sound/format\n- Progressive experience for breathing\n- Games: A/B testing, move to self-progress mode\n\n### Short Term: Acquisition Setup\n- Performance marketing (Appsflyer integration)\n- Performance marketing attribution to personalised app behaviour\n- GTM for paid user acquisition (collaterals, support, session script)\n- GTM of existing features via WA channels\n- Setup A/B testing\n\n### Medium Term: Retention\n- Figure out (Product/Research + Data): App Installs \u2192 App Opens, Daily Activity\n- Objective: What value motivates users to open app daily? What friction stops them?\n- Mobile CMS\n- Home Screen Revamp \u2192 Dynamic Home Screen \u2192 User Friendly Home Screen\n\n### Long Term: New Value Creation\n- Data Deepdive + User Research + Prototyping\n- 14-day challenge via app (Yes/No \u2014 clear call needed)\n- More value to sessions (Faster \u2014 next sprint)\n- Anxiety / Separate breathing app \u2014 Feature Set\n- New value creation\n\n---\n\n## Content Categories (YouTube \u2014 what resonates)\n\n| Category | Performance Signal |\n|---|---|\n| Pranayama & Breathing | #1 video \u2014 7.8M views (Daily Pranayama) |\n| Yoga for Pain Relief | Multiple videos 1M\u20134.3M views |\n| Fitness Routines | Strong across board |\n| Nutrition & Wellness | 3.1M views (Nutrient Deficiency), strong signal |\n| Meditation & Mindfulness | Yog Nidra 2.7M, Focus meditation 1.2M |\n| Weight Loss | Belly fat 1.8M, consistent demand |\n| Specialized Yoga | Chair yoga 2.2M, Eye yoga 2.5M, Kegel 1M |\n\n**Insight for \"what to build\"**: Breathing, Pain Relief, Nutrition, and Meditation have the highest organic demand from the audience \u2014 these map to potential in-app features.\n"},
+  {id:"user-research-syn",title:"User Research Synthesis",group:"Research",sc:"ps-a",content:"# Habuild User Research Synthesis\n**Source**: Research - User Calls + Habuild User Research Analysis PDF\n**Last updated**: Feb 23, 2026\n\n---\n\n## User Segments Identified\n\n| Segment | Profile | Key Trait |\n|---|---|---|\n| Committed Homemaker | India, 40\u201360 yrs | High attendance, price sensitive, family decision maker |\n| Health-Driven Senior | India, 60\u201375 yrs | Strong yoga outcome, digital literacy gap, family helps with payment |\n| Indian Diaspora Woman | USA/Canada/Belgium/UK, 45\u201375 yrs | High income, wants international experience, very loyal |\n| Working Professional | India, 30\u201350 yrs | Irregular schedule, misses sessions due to travel/work |\n| Chronic Pain Seeker | India, various | Joined for specific condition (knee/back pain), high retention |\n| YouTube-to-Habuild Migrant | India, mixed | Organic discovery, may not convert to paid, high awareness of SB |\n\n---\n\n## Top 10 Themes from Research\n\n1. **Physical health outcomes are real and documented** \u2014 users report knee pain, back pain, sinus, BP, weight loss improvements in 15\u201320 days\n2. **Saurabh Bothra's teaching style is irreplaceable** \u2014 language, forgiving attitude, \"jitna chaahe kar lijiye\" framing is the core retention driver\n3. **WhatsApp is the primary product interface** \u2014 users join sessions via WA link, not the app. App is an afterthought for most\n4. **App feature awareness is near zero** \u2014 most users don't know what the app does beyond brain games\n5. **Payment page UX failures are causing direct revenue loss** \u2014 multiple users tried to pay, couldn't due to form issues (name/email fields not working, GPay number mismatch)\n6. **Affordability is a real barrier** \u2014 \"\u20b94000 ek saath dena tough hai\" \u2014 monthly/quarterly plans would unlock a significant segment\n7. **No recordings = barrier for inconsistent users** \u2014 working professionals, travellers want to catch up on missed sessions\n8. **Schedule rigidity hurts working users** \u2014 can't always make live sessions, no fallback\n9. **Evening batch has a motivation problem** \u2014 not about the teacher, about habit formation in evenings vs mornings\n10. **App login friction** \u2014 entering phone number daily is painful; users don't return to app because of this\n\n---\n\n## Why Users Didn't Pay (Non-Conversion Reasons)\n\n| Reason | Notes |\n|---|---|\n| Payment page technical failure | Name/email fields not submitting, GPay number different from WA number |\n| Can't afford \u20b93999 upfront | Monthly plan would help \u2014 \"500/month toh de dete\" |\n| Waiting for family member to help | Son/husband handles digital payments |\n| Life disruption (travel, illness, exams) | Deferred intent \u2014 likely to return |\n| Low attendance guilt | \"I only do it 2\u20133x/week, feels like wasting money if I subscribe\" |\n| Routine not yet established | Still in trial phase, not convinced of consistency yet |\n\n---\n\n## What Users Love\n\n- Saurabh Bothra's teaching \u2014 tone, clarity, forgiving approach\n- Physical results in 15\u201320 days (pain relief, flexibility, energy)\n- WhatsApp experience \u2014 reminders, support, 10/10 rated\n- Multiple time slots across the day\n- Community feel and scale (pride in GWR participation)\n- Sugar detox, nutrition content that comes via WA\n\n---\n\n## Pain Points & Friction\n\n### Payment & Conversion (CRITICAL \u2014 direct revenue loss)\n- Payment form UX failures (name, email, GPay number mismatch)\n- No monthly/quarterly plan \u2014 upfront \u20b93999 is too high for many\n- No easy escalation when payment fails\n\n### App Friction\n- Daily phone number entry to join session via app\n- No app recall among users \u2014 \"konsa app?\"\n- Features not discoverable \u2014 brain games, box breathing exist but unknown\n- No recorded sessions in app\n- \"App mein kuch nahi hai\" \u2014 minimal experience perception\n\n### Scheduling & Attendance\n- No recorded sessions for missed days\n- Evening batch has motivation gap (users keep intending but not attending)\n- Guilt from low attendance makes users less likely to pay\n\n### Communication & Language\n- Tamil/Marathi-speaking users struggle (interviews had language barriers)\n- Hindi-heavy communication may not work for South Indian users\n\n### Feature Discovery\n- Box breathing: very few have tried it \u2014 mostly because it's not surfaced\n- Brain games: low recall and engagement \u2014 \"not creative\", \"age ke liye theek nahi laga\"\n\n---\n\n## Surprising / Unexpected Findings\n\n1. **Referral reward program is NOT the referral driver** \u2014 word of mouth is organic (sister, beti ki saas, friend)\n2. **Research phone calls themselves function as retention** \u2014 users who got called felt seen and were more likely to continue\n3. **Live sessions beat recordings as engagement hook** \u2014 users specifically prefer live even when recordings would be more convenient\n4. **App is used as a \"did I forget something\" tool** \u2014 not a daily driver\n5. **Procrastination is named as a genuine product problem** \u2014 users self-aware but can't solve it\n6. **Users calculating Habuild's revenue with appreciation, not resentment** \u2014 very positive brand sentiment\n7. **Evening batch motivation is contextual** \u2014 morning habit is strong, evening habit doesn't form the same way\n\n---\n\n## Actionable Recommendations (from Research)\n\n| Priority | Recommendation |\n|---|---|\n| CRITICAL | Fix payment flow immediately \u2014 form bugs, GPay flow |\n| High | Introduce monthly/quarterly pricing tier |\n| High | Build missed session backlog + recorded sessions access |\n| High | Redesign app's role in user journey |\n| Medium-High | Dedicated international/diaspora experience |\n| Medium | Re-engagement flow for lapsed users |\n| Medium | Realign referral incentives |\n| Medium | Improve onboarding for new registrants |\n| Medium | Condition-specific content discovery (knee, BP, PCOD) |\n| Low-Medium | Address evening batch experience specifically |\n\n---\n\n## Key User Quotes\n\n> \"Naam daalo email daalo jama nahi\" \u2014 payment form not working, user couldn't pay\n\n> \"\u20b94000 ek saath dena tough hai, 500/month toh de dete\"\n\n> \"App mein kuch nahi hai\" \u2014 user perception of empty app\n\n> \"Rozz number daalna padta hai isliye nahi karti use\" \u2014 login friction kills daily app use\n\n> \"WhatsApp service I will rate 10/10\" \u2014 WA is the gold standard in their eyes\n\n> \"Me baahar hoon ghar pahunch ke call back karte hoon\" (Adit Sahney) \u2014 users are living busy lives\n\n> \"Subah uthke Saurabh sir ko dekhti hoon bas sab theek ho jaata hai\" \u2014 emotional connection to SB is real\n\n> \"Live sessions pe jab karti hoon tab class miss karna nahi chahti\" \u2014 live creates commitment that recordings can't\n\n> \"I was hooked with game so I didn't download again\" \u2014 app game engagement exists but login re-friction kills it\n"}
+];
+
+let activeWorkFile = WORK_FILES[0].id;
+let _saveTimer = null;
+let currentTab = 'today';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const chatBar   = document.querySelector('.chat-bar');
+  const todayPane  = document.getElementById('today-pane');
+  const myworkPane = document.getElementById('mywork-pane');
+  if (tab === 'today') {
+    if (todayPane)  todayPane.style.display  = '';
+    if (myworkPane) myworkPane.style.display = 'none';
+    if (chatBar)    chatBar.style.display    = '';
+  } else {
+    if (todayPane)  todayPane.style.display  = 'none';
+    if (myworkPane) myworkPane.style.display = '';
+    if (chatBar)    chatBar.style.display    = 'none';
+    renderMyWork();
+  }
+}
+
+const SC_COLOR = { 'ps-a':'#34d399', 'ps-w':'#fbbf24', 'ps-d':'#60a5fa', 'ps-s':'#555' };
+const SC_LABEL = { 'ps-a':'Active', 'ps-w':'Waiting', 'ps-d':'In progress', 'ps-s':'Scoping' };
+
+const WORK_META = {
+  'overview':          { type:'Overview',     desc:'This week\'s plan + priority buckets' },
+  'user-research':     { type:'Strategic',    desc:'User calls, surveys, insights' },
+  'trial':             { type:'Strategic',    desc:'Data-backed go/no-go decision' },
+  'ab-testing':        { type:'Enabler',      desc:'Blocked on Ayush — timeline pending' },
+  'homescreen':        { type:'Feature',      desc:'Deeplink → personalised entry point' },
+  'web-prototypes':    { type:'Feature',      desc:'Fast testing before native build' },
+  'notifications':     { type:'Incremental',  desc:'CRM + PRD + copy + testing' },
+  'tv-app':            { type:'Strategic',    desc:'GTM + onboarding for existing members' },
+  'cog-games':         { type:'Feature',      desc:'Viyu, Kramika, Mind Math improvements' },
+  'content-cat':       { type:'Strategic',    desc:'New daily touchpoints beyond yoga' },
+  'product-direction': { type:'Research',     desc:'App direction data + signals' },
+  'user-research-syn': { type:'Research',     desc:'Synthesis from user calls' },
+};
+
+const FILE_MAP = {
+  'work-plan.md':'overview','01-user-research.md':'user-research','02-14-day-trial.md':'trial',
+  '03-ab-testing-infra.md':'ab-testing','04-dynamic-homescreen.md':'homescreen',
+  '05-web-prototypes.md':'web-prototypes','06-notifications.md':'notifications',
+  '07-tv-app.md':'tv-app','08-cognitive-games.md':'cog-games',
+  '09-content-categorisation.md':'content-cat',
+};
+
+// ── File helpers ───────────────────────────────────────────────────────────────
+function getFileContent(id) {
+  return localStorage.getItem('habuild_mw_'+id) || (WORK_FILES.find(f=>f.id===id)||{}).content || '';
+}
+function hasLocalEdits(id) {
+  return !!localStorage.getItem('habuild_mw_v_'+id);
+}
+function downloadFile(id) {
+  const file = WORK_FILES.find(f=>f.id===id); if (!file) return;
+  const blob = new Blob([file.content], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = file.title.replace(/[^a-z0-9]/gi,'-').toLowerCase()+'.md';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function resetFile(id) {
+  if (!confirm('Reset to original? Local edits will be lost.')) return;
+  localStorage.removeItem('habuild_mw_v_'+id);
+  renderFileContent(id); showToast('Reset to original');
+}
+
+function renderMarkdown(content, container, fileId) {
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({breaks:true, gfm:true});
+    container.innerHTML = marked.parse(content);
+    // marked.js converts - [ ] / - [x] to <input type="checkbox" disabled>
+    // Handlers attached separately via attachCheckboxHandlers()
+    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.removeAttribute('disabled');
+      const li = cb.closest('li');
+      if (li && cb.checked) { li.style.color = '#555'; li.style.textDecoration = 'line-through'; }
+    });
+    // Intercept .md doc links → open file in My Work
+    container.querySelectorAll('a[href]').forEach(a => {
+      const href = a.getAttribute('href') || '';
+      const filename = href.split('/').pop();
+      const fid = FILE_MAP[filename];
+      if (fid) {
+        a.onclick = e => { e.preventDefault(); activeWorkFile = fid; renderSidebar(); renderFileContent(fid); };
+        a.style.cursor = 'pointer';
+      } else if (href && !href.startsWith('http')) {
+        a.style.color = '#555'; a.style.textDecoration = 'none'; a.style.cursor = 'default';
+        a.onclick = e => e.preventDefault();
+      }
+    });
+  } else {
+    container.innerHTML = '<pre style="white-space:pre-wrap;color:#888">'+content.replace(/</g,'&lt;')+'</pre>';
+  }
+}
+
+// ── My Work: Notion layout ─────────────────────────────────────────────────────
+function renderMyWork() {
+  renderSidebar();
+  renderFileContent(activeWorkFile || WORK_FILES[0].id);
+}
+
+function renderSidebar() {
+  const sidebar = document.getElementById('mwSidebar'); if (!sidebar) return;
+  sidebar.innerHTML = '';
+  ['Projects','Research'].forEach(group => {
+    const files = WORK_FILES.filter(f => f.group === group);
+    if (!files.length) return;
+    const label = document.createElement('div'); label.className = 'mw-sidebar-group';
+    label.textContent = group; sidebar.appendChild(label);
+    files.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'mw-sidebar-item' + (f.id === activeWorkFile ? ' active' : '');
+      const dot = document.createElement('span'); dot.className = 'mw-sidebar-dot';
+      dot.style.background = SC_COLOR[f.sc] || '#444';
+      const name = document.createElement('span'); name.className = 'mw-sidebar-name';
+      name.textContent = f.title;
+      item.appendChild(dot); item.appendChild(name);
+      item.onclick = () => {
+        activeWorkFile = f.id;
+        sidebar.querySelectorAll('.mw-sidebar-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        renderFileContent(f.id);
+      };
+      sidebar.appendChild(item);
+    });
+  });
+}
+
+function renderFileContent(fileId) {
+  activeWorkFile = fileId;
+  const area = document.getElementById('mwContent'); if (!area) return;
+  area.innerHTML = '';
+  const file = WORK_FILES.find(f => f.id === fileId) || WORK_FILES[0];
+  const edited = hasLocalEdits(file.id);
+
+  // Actions bar
+  const actions = document.createElement('div'); actions.className = 'mw-file-actions';
+  const saveHint = document.createElement('span'); saveHint.className = 'mw-save-indicator';
+  saveHint.id = 'mwSaveIndicator'; saveHint.textContent = edited ? 'Edited locally' : '';
+  actions.appendChild(saveHint);
+  const sp = document.createElement('span'); sp.style.flex = '1'; actions.appendChild(sp);
+  const dlBtn = document.createElement('button'); dlBtn.className = 'mw-btn';
+  dlBtn.textContent = 'Download .md'; dlBtn.onclick = () => downloadFile(file.id);
+  actions.appendChild(dlBtn);
+  if (edited) {
+    const resetBtn = document.createElement('button'); resetBtn.className = 'mw-btn';
+    resetBtn.textContent = 'Reset'; resetBtn.onclick = () => resetFile(file.id);
+    actions.appendChild(resetBtn);
+  }
+  area.appendChild(actions);
+
+  // Editable content
+  const editable = document.createElement('div');
+  editable.className = 'mw-md mw-editable';
+  editable.contentEditable = 'true'; editable.spellcheck = false;
+  const savedHtml = localStorage.getItem('habuild_mw_v_' + file.id);
+  if (savedHtml) {
+    editable.innerHTML = savedHtml;
+    // Re-sync visual strikethrough state from checkbox attributes on load
+    editable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      const li = cb.closest('li');
+      if (li) { li.style.color = cb.checked ? '#555' : ''; li.style.textDecoration = cb.checked ? 'line-through' : ''; }
+    });
+  } else {
+    renderMarkdown(file.content, editable, null);
+  }
+  attachCheckboxHandlers(editable, file.id);
+
+  editable.addEventListener('input', () => {
+    clearTimeout(_saveTimer);
+    const ind = document.getElementById('mwSaveIndicator');
+    if (ind) ind.textContent = '...';
+    _saveTimer = setTimeout(() => {
+      localStorage.setItem('habuild_mw_v_' + file.id, editable.innerHTML);
+      if (ind) { ind.classList.add('saved'); ind.textContent = 'Saved'; setTimeout(() => { ind.classList.remove('saved'); ind.textContent = 'Edited locally'; }, 1500); }
+    }, 800);
+  });
+  area.appendChild(editable);
+}
+
+function attachCheckboxHandlers(container, fileId) {
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.style.cssText = 'cursor:pointer;accent-color:#34d399;margin-right:6px;';
+    cb.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      cb.checked = !cb.checked;
+      // Sync HTML attribute so innerHTML serializes the correct state
+      if (cb.checked) { cb.setAttribute('checked', ''); } else { cb.removeAttribute('checked'); }
+      const li = cb.closest('li');
+      if (li) { li.style.color = cb.checked ? '#555' : ''; li.style.textDecoration = cb.checked ? 'line-through' : ''; }
+      localStorage.setItem('habuild_mw_v_' + fileId, container.innerHTML);
+      const ind = document.getElementById('mwSaveIndicator');
+      if (ind) { ind.classList.add('saved'); ind.textContent = 'Saved'; setTimeout(() => { ind.classList.remove('saved'); ind.textContent = 'Edited locally'; }, 1500); }
+    });
+  });
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) { t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
